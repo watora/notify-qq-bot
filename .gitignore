@@ -1,0 +1,7 @@
+**/bin
+**/obj
+**/.vs
+/notify/logs
+**/.vscode
+/notify/persist-keys
+**/.env

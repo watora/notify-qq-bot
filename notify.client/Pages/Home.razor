@@ -1,0 +1,38 @@
+﻿@page "/"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@inject BlazorHttpHelper httpHelper
+@inject HttpClient httpClient
+
+<PageTitle>首页</PageTitle>
+
+@if (isAuthed.HasValue && !isAuthed.Value)
+{
+    <a href="/api/user/oauth/github">Github登录</a>
+}
+else if (isAuthed.HasValue && isAuthed.Value)
+{
+    <Card Title="当前登录用户">
+        <Space>
+            <SpaceItem>
+                <Avatar Src="@avatar" />
+            </SpaceItem>
+            <SpaceItem>@userName</SpaceItem>
+        </Space>
+    </Card>
+}
+
+@code {
+    private bool? isAuthed;
+    private string userName = "";
+    private string avatar = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var resp = await httpClient.GetAsync($"/api/user/info");
+        await httpHelper.HandleResponse<GetUserInfoResponse>(resp, "获取用户信息失败", userInfo => {
+            isAuthed = userInfo.IsAuthed;
+            userName = userInfo.Name ?? "";
+            avatar = userInfo.AvatarUrl ?? "";
+        });
+    }
+}

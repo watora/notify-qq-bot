@@ -1,0 +1,151 @@
+@page "/rss/config-show"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@inject BlazorHttpHelper httpHelper
+@inject HttpClient httpClient
+@inject NavigationManager navigationManager
+@using AntDesign.TableModels
+
+<PageTitle>RSS配置管理@(Helper.GetTag())</PageTitle>
+
+<PageHeader Class="site-page-header" Title="RSS配置管理" />
+
+<Table Loading="isLoading" TItem="RSSConfigDO" DataSource="data" PageSize="10" Total="totalNum" OnChange="OnChange">
+    <TitleTemplate>
+        <Flex Justify="space-between">
+            <Space style="width: 15%;">
+                <SpaceItem>订阅渠道</SpaceItem>
+                <SpaceItem>
+                    <SimpleSelect DefaultValue="@Consts.BilibiliLiveChannel" OnSelectedItemChanged="ChangeChannel">
+                        <SelectOptions>
+                            <SimpleSelectOption Value="@Consts.BilibiliLiveChannel" Label="B站直播"></SimpleSelectOption>
+                            <SimpleSelectOption Value="@Consts.BilibiliDynamicChannel" Label="B站动态"></SimpleSelectOption>
+                            <SimpleSelectOption Value="@Consts.YoutubeLiveChannel" Label="Youtube直播"></SimpleSelectOption>
+                        </SelectOptions>
+                    </SimpleSelect>
+                </SpaceItem>
+            </Space>
+            <Button Type="primary" @onclick="AddNew">新增</Button>
+        </Flex>
+    </TitleTemplate>
+    <ColumnDefinitions Context="row">
+        <GenerateColumns Definitions="@DefineColumns" HideColumnsByName="@hideColumns" />
+        <ActionColumn Title="操作">
+            <Space Size=@("middle")>
+                <SpaceItem>
+                    <a @onclick="() => Edit(row)">编辑</a>
+                </SpaceItem>
+                @if (row.IsActive) 
+                {
+                    <SpaceItem>
+                        <a @onclick="() => SetStatus(row.Id!.Value, false)">禁用</a>
+                    </SpaceItem>
+                } else {
+                    <SpaceItem>
+                        <a @onclick="() => SetStatus(row.Id!.Value, true)">启用</a>
+                    </SpaceItem>
+                }
+            </Space>
+        </ActionColumn>
+    </ColumnDefinitions>
+</Table>
+
+@code {
+    private int page = 1;
+    private bool hasNext = false;
+    private List<RSSConfigDO> data = new();
+    private int totalNum;
+    private bool isLoading;
+    private string channel = Consts.BilibiliLiveChannel;
+
+    private Dictionary<string, string> titleMap = new Dictionary<string, string>{
+        {"SubscribeId", "订阅对象Id"},
+        {"MsgTargetType", "消息发送对象类型"},
+        {"MsgTargetId", "消息发送对象Id"},
+        {"LastCheckTimeStr", "最后检查时间"},
+        {"LastMsgSendTimeStr", "最后消息发送时间"},
+        {"CheckInterval", "检查间隔"},
+        {"ExpCheckTimeStr", "下次检查时间"},
+        {"IsActive", "是否生效"},
+        {"Creator", "创建者"},
+        {"Comment", "备注"},
+    };
+
+    private List<string> hideColumns = new List<string>{"Id", "SubscribeChannel", "LastCheckTime", "LastMsgSendTime", "ExpCheckTime"};
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadRSSConfig();
+    }
+
+    private async Task ChangePage(int change)
+    {
+        page += change;
+        await LoadRSSConfig();
+    }
+
+    private async Task ChangeChannel(string value)
+    {
+        this.channel = value;
+        await LoadRSSConfig();
+    }
+
+    private async Task LoadRSSConfig()
+    {
+        isLoading = true;
+        var query = new Dictionary<string, string?>();
+        query["page"] = page.ToString();
+        query["size"] = "10";
+        query["subscribe_channel"] = channel;
+        var resp = await httpClient.GetAsync(QueryHelpers.AddQueryString("/api/manage/get-rss-config", query));
+        await httpHelper.HandleResponse<GetRSSConfigResponse>(resp, "读取数据失败", data => {
+            this.hasNext = data.HasNext;
+            this.data = data.RSSConfigs;
+            this.totalNum = (int)data.TotalCount;
+        });
+        isLoading = false;
+    }
+
+    private async Task OnChange(QueryModel<RSSConfigDO> queryModel)
+    {
+        if (page != queryModel.PageIndex)
+        {
+            page = queryModel.PageIndex;
+            await LoadRSSConfig();
+        }
+    }
+
+    private void AddNew()
+    {
+        navigationManager.NavigateTo("rss/config-edit", false);
+    }
+
+    private void Edit(RSSConfigDO row)
+    {
+        navigationManager.NavigateTo($"rss/config-edit/{row.Id}", false);
+    }
+
+    private async Task SetStatus(long id, bool active)
+    {
+        var resp = await httpClient.PostAsJsonAsync($"/api/manage/set-rss-config-status", new SetConfigStatusRequest{ Id = id, IsActive = active });
+        await httpHelper.HandleResponse(resp, "删除失败", "已删除");
+        await LoadRSSConfig();
+    }
+
+    private void DefineColumns(string name, IFieldColumn column)
+    {
+        if (titleMap.ContainsKey(name)) 
+        {
+            switch (name) {
+                case "CheckInterval":
+                    ((Column<long>)column).Title = titleMap[name];
+                    break;
+                case "IsActive":
+                    ((Column<bool>)column).Title = titleMap[name];
+                    break;
+                default:
+                    ((Column<string>)column).Title = titleMap[name];
+                    break;
+            }
+        }
+    }
+}

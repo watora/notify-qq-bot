@@ -1,0 +1,124 @@
+@page "/chat/config-show"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@inject BlazorHttpHelper httpHelper
+@inject HttpClient httpClient
+@inject NavigationManager navigationManager
+@inject IMessageService messageService
+@using AntDesign.TableModels
+
+<PageTitle>Chat配置管理@(Helper.GetTag())</PageTitle>
+
+<PageHeader Class="site-page-header" Title="Chat配置管理" />
+
+<Table Loading="isLoading" TItem="ChatConfigDO" DataSource="data" PageSize="10" Total="totalNum" OnChange="OnChange">
+    <TitleTemplate>
+        <Flex Justify="space-between">
+            <Button Type="primary" @onclick="AddNew">新增</Button>
+        </Flex>
+    </TitleTemplate>
+    <ColumnDefinitions Context="row">
+        <GenerateColumns Definitions="@DefineColumns" HideColumnsByName="@hideColumns" />
+        <ActionColumn Title="操作">
+            <Space Size=@("middle")>
+                <SpaceItem>
+                    <a @onclick="() => Edit(row)">编辑</a>
+                </SpaceItem>
+                @if (row.IsActive) 
+                {
+                    <SpaceItem>
+                        <a @onclick="() => SetStatus(row.Id!.Value, false)">禁用</a>
+                    </SpaceItem>
+                } else {
+                    <SpaceItem>
+                        <a @onclick="() => SetStatus(row.Id!.Value, true)">启用</a>
+                    </SpaceItem>
+                }
+            </Space>
+        </ActionColumn>
+    </ColumnDefinitions>
+</Table>
+
+@code 
+{
+    private int page = 1;
+    private List<ChatConfigDO> data = new();
+    private int totalNum;
+    private bool isLoading;
+
+    private Dictionary<string, string> titleMap = new Dictionary<string, string>{
+        {"TargetType", "消息发送对象类型"},
+        {"TargetId", "消息发送对象Id"},
+        {"Model", "使用模型"},
+        {"Provider", "服务提供者"},
+        {"IsActive", "是否生效"},
+        {"Creator", "创建者"},
+        {"Comment", "备注"},
+    };
+
+    private List<string> hideColumns = new List<string>{"Id"};
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadChatConfig();
+    }
+
+    private async Task ChangePage(int change)
+    {
+        page += change;
+        await LoadChatConfig();
+    }
+    private async Task LoadChatConfig()
+    {
+        isLoading = true;
+        var query = new Dictionary<string, string?>();
+        query["page"] = page.ToString();
+        query["size"] = "10";
+        var resp = await httpClient.GetAsync(QueryHelpers.AddQueryString("/api/manage/get-chat-config", query));
+        await httpHelper.HandleResponse<GetChatConfigResponse>(resp, "读取数据失败", data => {
+            this.data = data.ChatConfigs;
+            this.totalNum = (int)data.TotalCount;
+        });
+        isLoading = false;
+    }
+
+    private async Task OnChange(QueryModel<ChatConfigDO> queryModel)
+    {
+        if (page != queryModel.PageIndex)
+        {
+            page = queryModel.PageIndex;
+            await LoadChatConfig();
+        }
+    }
+
+    private void AddNew()
+    {
+        navigationManager.NavigateTo("chat/config-edit", false);
+    }
+
+    private void Edit(ChatConfigDO row)
+    {
+        navigationManager.NavigateTo($"chat/config-edit/{row.Id}", false);
+    }
+
+    private async Task SetStatus(long id, bool active)
+    {
+        var resp = await httpClient.PostAsJsonAsync($"/api/manage/set-chat-config-status", new SetConfigStatusRequest{ Id = id, IsActive = active });
+        await httpHelper.HandleResponse(resp, "删除失败", "已删除");
+        await LoadChatConfig();
+    }
+
+    private void DefineColumns(string name, IFieldColumn column)
+    {
+        if (titleMap.ContainsKey(name)) 
+        {
+            switch (name) {
+                case "IsActive":
+                    ((Column<bool>)column).Title = titleMap[name];
+                    break;
+                default:
+                    ((Column<string>)column).Title = titleMap[name];
+                    break;
+            }
+        }
+    }
+}

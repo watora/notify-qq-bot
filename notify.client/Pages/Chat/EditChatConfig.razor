@@ -1,0 +1,92 @@
+@page "/chat/config-edit/{ConfigId:long}"
+@page "/chat/config-edit"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@inject HttpClient httpClient
+@inject NavigationManager navigationManager
+@inject IMessageService messageService
+@inject BlazorHttpHelper httpHelper
+
+<PageTitle>聊天配置编辑</PageTitle>
+<PageHeader Class="site-page-header" Title="聊天配置编辑" />
+
+<Form Model="@config" LabelColSpan="8" WrapperColSpan="16" OnFinish="@submit">
+    <FormItem Label="服务提供商">
+        <SimpleSelect DefaultValue="@config.Provider" OnSelectedItemChanged="providerSelected">
+            <SelectOptions>
+                <SimpleSelectOption Value="@Consts.ChatProviderOpenAI" Label="OpenAI"></SimpleSelectOption>
+                <SimpleSelectOption Value="@Consts.ChatProviderAnthropic" Label="Anthropic"></SimpleSelectOption>
+            </SelectOptions>
+        </SimpleSelect>
+    </FormItem>
+    <FormItem Label="使用模型">
+        <RadioGroup @bind-Value="config.Model">
+            @if(!string.IsNullOrEmpty(config.Provider)) 
+            {
+                foreach(var model in ValidModels[config.Provider]) 
+                {
+                    <Radio Value="@model">@model</Radio>
+                }
+            }
+        </RadioGroup>
+    </FormItem>
+    <FormItem Label="聊天对象Id">
+        <Input @bind-Value="config.TargetId" />
+    </FormItem>
+    <FormItem Label="聊天类型">
+        <RadioGroup @bind-Value="config.TargetType">
+            <Radio Value="@Consts.MsgTargetTypeGroup">群聊</Radio>
+            <Radio Value="@Consts.MsgTargetTypePrivate">私聊</Radio>
+        </RadioGroup>
+    </FormItem>
+    <FormItem Label="备注">
+        <Input @bind-Value="config.Comment" />
+    </FormItem>
+    <FormItem WrapperColOffset="8" WrapperColSpan="16">
+        <Button Type="@ButtonType.Primary" HtmlType="submit">
+            提交
+        </Button>
+    </FormItem>
+</Form>
+
+@code {
+    [Parameter]
+    public long? ConfigId { get; set; }
+
+    private Dictionary<string, List<string>> ValidModels = new Dictionary<string, List<string>>{
+        {Consts.ChatProviderOpenAI, ["chatgpt-4o-latest", "gpt-4o-mini", "o1-mini", "gpt-3.5-turbo"]},
+        {Consts.ChatProviderAnthropic, [""]},
+    };
+
+    private ChatConfigDO config = new ChatConfigDO { IsActive = true };
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (ConfigId != null)
+        {
+            var response = await httpClient.GetAsync($"/api/manage/get-chat-config/{ConfigId}");
+            await httpHelper.HandleResponse<ChatConfigDO>(response, "配置加载失败", cfg => config = cfg);
+        }
+    }
+
+    private void providerSelected(string value)
+    {
+        config.Provider = value;
+    }
+
+    private void modelSelected(string value)
+    {
+        config.Model = value;
+    }
+
+    private async Task submit(EditContext editContext)
+    {
+        var req = new SaveChatConfigRequest
+        {
+            Configs = new List<ChatConfigDO> { config }
+        };
+        var response = await httpClient.PostAsJsonAsync($"/api/manage/save-chat-config", req);
+        await httpHelper.HandleResponse(response, "保存失败", "", () => {
+            navigationManager.NavigateTo("/chat/config-show", false);
+        });
+    }
+}

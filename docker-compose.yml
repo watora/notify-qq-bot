@@ -1,0 +1,83 @@
+services:
+    notify:
+        image: dinq/notify:latest
+        container_name: notify
+        restart: always
+        user: root
+        ports:
+            - "80:8080"
+        environment:
+            - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT}
+            - ASPNETCORE_URLS=${ASPNETCORE_URLS}
+            - NOTIFY_GITHUB_SECRET=${NOTIFY_GITHUB_SECRET}
+            - NOTIFY_GITHUB_CLIENTID=${NOTIFY_GITHUB_CLIENTID}
+            - YOUTUBE_KEY=${YOUTUBE_KEY}
+            - OPENAI_TOKEN=${OPENAI_TOKEN}
+            - OPENAI_ENDPOINT=${OPENAI_ENDPOINT}
+        depends_on:
+            - rsshub
+            - napcat
+        volumes:
+            - notify:/app/logs
+            - notify:/app/persist-keys
+            - notify:/app/data
+        healthcheck:    
+            test: ["CMD", "curl", "-f", "http://localhost:8080/api/manage/health"]
+            interval: 30s
+            timeout: 10s
+            retries: 3
+
+    rsshub:
+        # two ways to enable puppeteer:
+        # * comment out marked lines, then use this image instead: diygod/rsshub:chromium-bundled
+        # * (consumes more disk space and memory) leave everything unchanged
+        image: diygod/rsshub:chromium-bundled
+        container_name: rsshub
+        restart: always
+        ports:
+            - "1200:1200"
+        environment:
+            NODE_ENV: production
+            CACHE_TYPE: redis
+            REDIS_URL: "redis://redis:6379/"
+            YOUTUBE_KEY: ${YOUTUBE_KEY}
+        healthcheck:
+            test: ["CMD", "curl", "-f", "http://localhost:1200/healthz"]
+            interval: 30s
+            timeout: 10s
+            retries: 3
+        depends_on:
+            - redis
+
+    redis:
+        container_name: redis
+        image: redis:alpine
+        restart: always
+        volumes:
+            - redis-data:/data
+        healthcheck:
+            test: ["CMD", "redis-cli", "ping"]
+            interval: 30s
+            timeout: 10s
+            retries: 5
+            start_period: 5s
+
+    napcat:
+        environment:
+            - NAPCAT_UID=${NAPCAT_UID}
+            - NAPCAT_GID=${NAPCAT_GID}
+        ports:
+            - 3000:3000
+            - 6099:6099
+        privileged: true
+        container_name: napcat
+        restart: always
+        image: mlikiowa/napcat-docker:latest
+        volumes:
+            - napcat:/app/.config/QQ
+            - napcat:/app/napcat/config
+
+volumes:
+    redis-data:
+    napcat:
+    notify:

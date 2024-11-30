@@ -1,0 +1,83 @@
+@page "/chat/private"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@inject NavigationManager navigation
+@inject HttpClient httpClient
+@implements IAsyncDisposable
+
+<PageTitle>聊天</PageTitle>
+
+<PageHeader Class="site-page-header" Title="聊天" />
+
+<div class="form-group">
+    <label>
+        Message:
+        <input @bind="messageInput" size="50" />
+    </label>
+</div>
+<button @onclick="Send" disabled="@(!IsConnected())">Send</button>
+
+<hr>
+
+<ul id="messagesList">
+    @foreach (var message in messages)
+    {
+        <li>@message</li>
+    }
+</ul>
+
+@code {
+    private HubConnection? hubConnection;
+    private List<string> messages = [];
+    private string? messageInput;
+    private string model = "chatgpt-4o-latest";
+
+    public class IncludeRequestCredentialsMessageHandler : DelegatingHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            request.SetBrowserRequestCredentials(BrowserRequestCredentials.Include);
+            return base.SendAsync(request, cancellationToken);
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        hubConnection = new HubConnectionBuilder()
+            .WithUrl($"{httpClient.BaseAddress}signalr/chathub/private", opt =>
+            {
+                opt.HttpMessageHandlerFactory = innerHandler => 
+                    new IncludeRequestCredentialsMessageHandler { InnerHandler = innerHandler };
+            })
+            .Build();
+
+        hubConnection.On<string>("ReplyFromBot", msg =>
+        {
+            messages.Add(msg);
+            InvokeAsync(StateHasChanged);
+        });
+
+        await hubConnection.StartAsync();
+    }
+
+    private async Task Send()
+    {
+        if (hubConnection != null)
+        {
+            await hubConnection.SendAsync("ChatToBot", model, messageInput);
+        }
+    }
+
+    public bool IsConnected()
+    {
+        return hubConnection?.State == HubConnectionState.Connected;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        if (hubConnection != null)
+        {
+            await hubConnection.DisposeAsync();
+        }
+    }
+}
