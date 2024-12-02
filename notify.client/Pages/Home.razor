@@ -2,12 +2,13 @@
 @rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
 @inject BlazorHttpHelper httpHelper
 @inject HttpClient httpClient
+@inject NavigationManager navigationManager
 
 <PageTitle>首页</PageTitle>
 
 @if (isAuthed.HasValue && !isAuthed.Value)
 {
-    <a href="/api/user/oauth/github">Github登录</a>
+    <Button Type="@ButtonType.Primary" OnClick="@Login">Github登录</Button>
 }
 else if (isAuthed.HasValue && isAuthed.Value)
 {
@@ -34,5 +35,10 @@ else if (isAuthed.HasValue && isAuthed.Value)
             userName = userInfo.Name ?? "";
             avatar = userInfo.AvatarUrl ?? "";
         });
+    }
+
+    public void Login(MouseEventArgs args) 
+    {
+        navigationManager.NavigateTo("/api/user/oauth/github", false);
     }
 }

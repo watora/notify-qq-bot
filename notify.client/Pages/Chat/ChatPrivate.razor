@@ -6,30 +6,37 @@
 
 <PageTitle>聊天</PageTitle>
 
-<PageHeader Class="site-page-header" Title="聊天" />
-
-<div class="form-group">
-    <label>
-        Message:
-        <input @bind="messageInput" size="50" />
-    </label>
-</div>
-<button @onclick="Send" disabled="@(!IsConnected())">Send</button>
-
-<hr>
-
-<ul id="messagesList">
-    @foreach (var message in messages)
-    {
-        <li>@message</li>
-    }
-</ul>
+<Flex Justify="center" Style="height:calc(100vh - 4.6rem); width:100%; overflow: hidden;">
+    <Flex Vertical Align="flex-start" Style="width:55%; height:100%; overflow: hidden;">
+        <div style="width:100%; height:85%; overflow:auto">
+            @foreach (var message in messages)
+            {
+                <Flex Justify="@message.Item1" Style="width:100%">
+                    <div style="max-width:75%; margin:5px; white-space:pre-line; background-color: aliceblue; border-radius:10px; padding:7px">
+                        @if(message.Item2=="#loading") 
+                        {
+                            <Spin Tip="Loading..."/>
+                        } 
+                        else
+                        {
+                            @message.Item2
+                        }
+                    </div>
+                </Flex>
+            }
+        </div>
+        <div style="width:100%; height:15%; overflow:hidden; padding:7px"> 
+            <Search Placeholder="input" EnterButton="@("Enter")" @bind-Value="@messageInput" AllowClear OnSearch="Send" Width="100%"/>
+        </div>
+    </Flex>
+</Flex>
 
 @code {
     private HubConnection? hubConnection;
-    private List<string> messages = [];
+    private List<(string, string)> messages = [];
     private string? messageInput;
     private string model = "chatgpt-4o-latest";
+    private bool loading;
 
     public class IncludeRequestCredentialsMessageHandler : DelegatingHandler
     {
@@ -53,7 +60,8 @@
 
         hubConnection.On<string>("ReplyFromBot", msg =>
         {
-            messages.Add(msg);
+            messages[messages.Count-1] = ("flex-end", msg);
+            loading = false;
             InvokeAsync(StateHasChanged);
         });
 
@@ -62,15 +70,15 @@
 
     private async Task Send()
     {
-        if (hubConnection != null)
+        if (hubConnection?.State == HubConnectionState.Connected && !string.IsNullOrEmpty(messageInput) && !loading)
         {
+            loading = true;
+            messages.Add(("flex-start", messageInput));
+            messages.Add(("flex-end", "#loading"));
+            await InvokeAsync(StateHasChanged);
             await hubConnection.SendAsync("ChatToBot", model, messageInput);
+            messageInput = "";
         }
-    }
-
-    public bool IsConnected()
-    {
-        return hubConnection?.State == HubConnectionState.Connected;
     }
 
     public async ValueTask DisposeAsync()

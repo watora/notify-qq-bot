@@ -78,8 +78,9 @@ public class OneBotEvent
         // 私聊
         if (onebotEvent.MessageType == Consts.MsgTargetTypePrivate)
         {
-            return onebotEvent.SubType == "friend";
+            return true;
         }
+        // 群聊
         foreach (var item in onebotEvent.Message)
         {
             var at = item.Data.QQ;
