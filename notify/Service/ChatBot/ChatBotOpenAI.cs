@@ -90,13 +90,13 @@ public class ChatBotOpenAI : ChatBotBase
             FillHistoryChat(uniqueKey, input);
             logger.LogDebug($"call chat completion, req:{JsonSerializer.Serialize(input)}");
             var resp = await httpClient.PostAsJsonAsync("v1/chat/completions", input);
+            var respStr = await resp.Content.ReadAsStringAsync();
+            logger.LogDebug($"call chat completion, resp:{respStr}");
             if (!resp.IsSuccessStatusCode)
             {
                 logger.LogInformation($"call openai chat completions failed, code:{resp.StatusCode}");
                 return null;
             }
-            var respStr = await resp.Content.ReadAsStringAsync();
-            logger.LogDebug($"call chat completion, resp:{respStr}");
             var chatCompletion = JsonSerializer.Deserialize<OpenAIChatCompletion>(respStr);
             SaveChatCompletion(uniqueKey, chatCompletion);
             return chatCompletion;

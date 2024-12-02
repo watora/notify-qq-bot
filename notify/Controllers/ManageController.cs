@@ -38,8 +38,8 @@ public class ManageController : ControllerBase
     }
 
     [AllowAnonymous]
-    [HttpGet("/test/youtube/live")]
-    public async Task<ActionResult<OneBotMessage>> TestYoutube([FromQuery] string subscribeId)
+    [HttpGet("test/youtube/live")]
+    public async Task<ActionResult<OneBotMessage>> TestYoutube([FromQuery(Name = "subscribe_id")] string subscribeId)
     {
         var channel = rssNotifyYoutube.GetLiveInfo(subscribeId);
         if (channel == null)

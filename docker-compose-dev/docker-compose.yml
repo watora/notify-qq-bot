@@ -1,32 +1,4 @@
 services:
-    notify:
-        image: dinq/notify:latest
-        container_name: notify
-        restart: always
-        user: root
-        ports:
-            - "80:8080"
-        environment:
-            - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT}
-            - ASPNETCORE_URLS=${ASPNETCORE_URLS}
-            - NOTIFY_GITHUB_SECRET=${NOTIFY_GITHUB_SECRET}
-            - NOTIFY_GITHUB_CLIENTID=${NOTIFY_GITHUB_CLIENTID}
-            - YOUTUBE_KEY=${YOUTUBE_KEY}
-            - OPENAI_TOKEN=${OPENAI_TOKEN}
-            - OPENAI_ENDPOINT=${OPENAI_ENDPOINT}
-        depends_on:
-            - rsshub
-            - napcat
-        volumes:
-            - notify:/app/logs
-            - notify:/app/persist-keys
-            - notify:/app/data
-        healthcheck:    
-            test: ["CMD", "curl", "-f", "http://localhost:8080/api/manage/health"]
-            interval: 30s
-            timeout: 10s
-            retries: 3
-
     rsshub:
         # two ways to enable puppeteer:
         # * comment out marked lines, then use this image instead: diygod/rsshub:chromium-bundled
@@ -34,6 +6,8 @@ services:
         image: diygod/rsshub:chromium-bundled
         container_name: rsshub
         restart: always
+        ports:
+            - "1200:1200"
         environment:
             NODE_ENV: production
             CACHE_TYPE: redis
@@ -65,6 +39,7 @@ services:
             - NAPCAT_UID=${NAPCAT_UID}
             - NAPCAT_GID=${NAPCAT_GID}
         ports:
+            - 3000:3000
             - 6099:6099
         privileged: true
         container_name: napcat

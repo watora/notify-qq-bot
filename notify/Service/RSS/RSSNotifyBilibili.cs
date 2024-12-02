@@ -167,7 +167,7 @@ public class RSSNotifyBilibili : RSSNotifyBase
         foreach (var rssItem in validItems)
         {
             var msg = new OneBotMessage();
-            var title = $"⭐{rssItem.Author}发布了新动态⭐\n{rssItem.Link}\n";
+            var title = $"⭐{rssItem.Author}⭐发布了新动态\n{rssItem.Link}\n";
             var replaced = Regex.Replace(rssItem.Description, "(<br>)+", " ");
             if (!replaced.Contains(rssItem.Title.TrimEnd('.')))
             {
@@ -176,8 +176,9 @@ public class RSSNotifyBilibili : RSSNotifyBase
             msg.Items.Add(new OneBotMessageItem
             {
                 Type = OneBotMessageType.Text.ToCustomString(),
-                Data = new Dictionary<string, string> {
-                    {OneBotMessageDataKey.Text.ToCustomString(), title},
+                Data = new OneBotMessageItemData
+                {
+                    Text = title,
                 }
             });
             var desc = rssItem.Description.Replace("(<br>)+", "\n");
@@ -195,7 +196,7 @@ public class RSSNotifyBilibili : RSSNotifyBase
                         msg.Items.Add(new OneBotMessageItem
                         {
                             Type = OneBotMessageType.CQImage.ToCustomString(),
-                            Data = new Dictionary<string, string> { { OneBotMessageDataKey.Url.ToCustomString(), src.Value } }
+                            Data = new OneBotMessageItemData { Url = src.Value }
                         });
                         break;
                     case "a":
@@ -203,15 +204,16 @@ public class RSSNotifyBilibili : RSSNotifyBase
                         msg.Items.Add(new OneBotMessageItem
                         {
                             Type = OneBotMessageType.Text.ToCustomString(),
-                            Data = new Dictionary<string, string> { { OneBotMessageDataKey.Text.ToCustomString(), href } }
+                            Data = new OneBotMessageItemData { Text = href }
                         });
                         break;
                     case "#text":
                         msg.Items.Add(new OneBotMessageItem
                         {
                             Type = OneBotMessageType.Text.ToCustomString(),
-                            Data = new Dictionary<string, string> {
-                                { OneBotMessageDataKey.Text.ToCustomString(), child.InnerHtml }
+                            Data = new OneBotMessageItemData
+                            {
+                                Text = child.InnerHtml,
                             }
                         });
                         break;
@@ -239,12 +241,12 @@ public class RSSNotifyBilibili : RSSNotifyBase
         var msg = new OneBotMessage();
         var title = rssItem.Title.Substring(0, rssItem.Title.Length - 19);
         var author = rssChannel.Title.Split(" ")[0];
-        var text = $"⭐{author}直播中⭐ {title}\n{rssItem.Link}";
+        var text = $"⭐{author}⭐直播中\n{title}\n{rssItem.Link}";
         msg.Items.Add(new OneBotMessageItem
         {
             Type = OneBotMessageType.Text.ToCustomString(),
-            Data = new Dictionary<string, string> {
-                {OneBotMessageDataKey.Text.ToCustomString(), text},
+            Data = new OneBotMessageItemData {
+                Text = text,
             }
         });
         return msg;

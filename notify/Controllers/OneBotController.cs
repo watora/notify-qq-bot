@@ -1,6 +1,9 @@
+using System.Security.Cryptography;
+using System.Text;
 using Microsoft.AspNetCore.Mvc;
 using Notify.Domain.Models;
 using Notify.Service.OneBot;
+using SQLitePCL;
 
 namespace notify.Controllers;
 
@@ -10,7 +13,7 @@ public class OneBotController : ControllerBase
 {
     private OneBotEvent oneBotEvent;
     private IConfiguration configuration;
-    private string authToken;
+    private string secret;
     private ILogger<OneBotController> logger;
     private IHostEnvironment hostEnvironment;
 
@@ -18,34 +21,42 @@ public class OneBotController : ControllerBase
     {
         this.oneBotEvent = oneBotEvent;
         this.configuration = configuration;
-        var token = configuration["ONEBOT_EVENT_TOKEN"];
-        authToken = $"Bearer {token}";
+        secret = configuration["ONEBOT_EVENT_SECRET"] ?? "";
         this.logger = logger;
         this.hostEnvironment = hostEnvironment;
     }
 
     [HttpPost("event")]
-    public async Task<ActionResult> HandleEvent([FromBody] OneBotEventBase eventBase)
+    public async Task<ActionResult> HandleEvent()
     {
-        //check token
-        var auth = HttpContext.Request.Headers.Authorization.FirstOrDefault();
-        if (!hostEnvironment.IsDevelopment() && auth != authToken)
+        using var reader = new StreamReader(HttpContext.Request.Body);
+        var rawBody = await reader.ReadToEndAsync();
+        logger.LogInformation($"receive one bot event, body:{rawBody}");
+        if (!string.IsNullOrEmpty(secret))
         {
-            logger.LogInformation($"unauthorized one bot message, auth:{auth}");
-            return Unauthorized();
+            var sign = HttpContext.Request.Headers["X-Signature"];
+            if (string.IsNullOrEmpty(sign))
+            {
+                logger.LogInformation($"unauthorized one bot event");
+                return Unauthorized();
+            }
+            var secretBytes = Encoding.UTF8.GetBytes(secret);
+            var hmacsha1 = new HMACSHA1(secretBytes);
+            var calcSign = hmacsha1.ComputeHash(Encoding.UTF8.GetBytes(rawBody));
+            if ($"sha1={Encoding.UTF8.GetString(calcSign)}" != sign)
+            {
+                logger.LogInformation($"one bot event invalid sign:{sign}");
+                return Unauthorized();
+            }
         }
-        using (var reader = new StreamReader(HttpContext.Request.Body))
+        try
         {
-            var postData = reader.ReadToEnd();
-            try
-            {
-                await oneBotEvent.HandleEvent(eventBase, postData);
-            }
-            catch (Exception e)
-            {
-                logger.LogError(e, "handle one bot message err");
-                return Problem();
-            }
+            await oneBotEvent.HandleEvent(rawBody);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "handle one bot message err");
+            return Problem();
         }
         return Ok();
     }

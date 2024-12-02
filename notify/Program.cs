@@ -35,7 +35,7 @@ builder.Services.AddAuthentication(opt =>
 }).AddCookie(opt =>
 {
     opt.Cookie.Name = "auth_info";
-    opt.LoginPath = "/login";
+    //opt.LoginPath = "/login";
     opt.ExpireTimeSpan = TimeSpan.FromDays(14);
     opt.Events.OnRedirectToLogin = context =>
     {
@@ -66,7 +66,6 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
     };
 });
 builder.Services.AddSerilog((sp, opt) => opt.ReadFrom.Configuration(builder.Configuration));
-builder.Services.AddAntDesign();
 
 var app = builder.Build();
 

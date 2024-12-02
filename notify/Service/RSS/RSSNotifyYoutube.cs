@@ -84,13 +84,13 @@ public class RSSNotifyYoutube : RSSNotifyBase
         }
         var rssItem = rssChannel.Items[0];
         var msg = new OneBotMessage();
-        var author = rssItem.Title.Substring(0, rssItem.Title.Length - 14);
-        var text = $"⭐{author}直播中⭐\n{rssItem.Title}\n{rssItem.Link}";
+        var author = rssChannel.Title.Substring(0, rssChannel.Title.Length - 14);
+        var text = $"⭐{author}⭐直播中\n{rssItem.Title}\n{rssItem.Link}";
         msg.Items.Add(new OneBotMessageItem
         {
             Type = OneBotMessageType.Text.ToCustomString(),
-            Data = new Dictionary<string, string> {
-                {OneBotMessageDataKey.Text.ToCustomString(), text},
+            Data = new OneBotMessageItemData {
+                Text = text,
             }
         });
         if (!string.IsNullOrEmpty(rssItem.RelatedImg)) 
@@ -98,8 +98,8 @@ public class RSSNotifyYoutube : RSSNotifyBase
             msg.Items.Add(new OneBotMessageItem
             {
                 Type = OneBotMessageType.CQImage.ToCustomString(),
-                Data = new Dictionary<string, string> {
-                    {OneBotMessageDataKey.Url.ToCustomString(), rssItem.RelatedImg},
+                Data = new OneBotMessageItemData {
+                    Url = rssItem.RelatedImg,
                 }
             });
         }

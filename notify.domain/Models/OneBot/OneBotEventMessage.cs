@@ -2,7 +2,7 @@ using System.Text.Json.Serialization;
 
 namespace Notify.Domain.Models;
 
-public abstract class OneBotEventMessage : OneBotEventBase
+public class OneBotEventMessage: OneBotEventBase
 {
     /// <summary>
     /// 消息类型
@@ -14,7 +14,7 @@ public abstract class OneBotEventMessage : OneBotEventBase
     /// 消息子类型
     /// </summary>
     [JsonPropertyName("sub_type")]
-    public required string SubType { get; set; }
+    public string? SubType { get; set; }
 
     /// <summary>
     /// 消息id
@@ -38,8 +38,11 @@ public abstract class OneBotEventMessage : OneBotEventBase
     /// 消息内容
     /// </summary>
     [JsonPropertyName("message")]
-    public required OneBotMessage Message { get; set; }
+    public required List<OneBotMessageItem> Message { get; set; }
 
+    /// <summary>
+    /// 发送者
+    /// </summary>
     [JsonPropertyName("sender")]
     public required OneBotEventMessageSender Sender { get; set; }
 }

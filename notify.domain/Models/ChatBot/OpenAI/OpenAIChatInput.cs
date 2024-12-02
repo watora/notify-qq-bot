@@ -34,5 +34,11 @@ public class OpenAIChatInputMessageContent
 
     [JsonPropertyName("image_url")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
-    public string? ImageUrl { get; set; }
+    public OpenAIChatInputContentImage? ImageUrl { get; set; }
+}
+
+public class OpenAIChatInputContentImage
+{
+    [JsonPropertyName("url")]
+    public required string Url { get; set; }
 }
