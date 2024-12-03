@@ -6,7 +6,6 @@ using Notify.Domain.Models.Response;
 using Notify.Repository;
 using Notify.Service;
 using Notify.Service.Hubs;
-using Notify.Utils;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -89,7 +88,7 @@ app.UseAntiforgery();
 
 app.MapControllers();
 app.MapHub<PrivateHub>("/signalr/chathub/private");
-app.MapRazorComponents<Notify.Client.App>()
+app.MapRazorComponents<Notify.Client.Index>()
     .AddInteractiveWebAssemblyRenderMode();
 
 app.Run();

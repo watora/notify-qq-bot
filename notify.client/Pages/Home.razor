@@ -39,6 +39,6 @@ else if (isAuthed.HasValue && isAuthed.Value)
 
     public void Login(MouseEventArgs args) 
     {
-        navigationManager.NavigateTo("/api/user/oauth/github", false);
+        navigationManager.NavigateTo("/api/user/oauth/github", true);
     }
 }
