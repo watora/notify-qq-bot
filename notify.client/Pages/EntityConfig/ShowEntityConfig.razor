@@ -1,0 +1,162 @@
+@page "/entity/config-show"
+@rendermode @(new InteractiveWebAssemblyRenderMode(prerender: false))
+@inject BlazorHttpHelper httpHelper
+@inject HttpClient httpClient
+@inject NavigationManager navigationManager
+@using AntDesign.TableModels
+
+<PageTitle>全局配置管理@(Helper.GetTag())</PageTitle>
+
+<PageHeader Class="site-page-header" Title="全局配置管理" />
+
+<Table @ref="@table" Loading="@isLoading" TItem="@EntityConfigDO" DataSource="@data" PageSize="10" Total="@totalNum" OnChange="@OnChange">
+    <TitleTemplate>
+        <Flex Justify="space-between">
+            <Space Style="width:30%;">
+                <SpaceItem>Key</SpaceItem>
+                <SpaceItem>
+                    <Input Placeholder="press enter" @bind-Value="@searchKey" @onkeydown="@Search" />
+                </SpaceItem>
+            </Space>
+            <Button Type="primary" @onclick="@AddNew">新增</Button>
+        </Flex>
+    </TitleTemplate>
+    <ColumnDefinitions Context="row">
+        <GenerateColumns Definitions="@DefineColumns" />
+        <ActionColumn Title="操作">
+            <Space Size=@("middle")>
+                <SpaceItem>
+                    <a @onclick="() => Edit(row)">修改</a>
+                </SpaceItem>
+                <SpaceItem>
+                    <a @onclick="() => Del(row.Key!)">删除</a>
+                </SpaceItem>
+            </Space>
+        </ActionColumn>
+    </ColumnDefinitions>
+</Table>
+
+<Modal Title="编辑" @bind-Visible="@editVisible" OnOk="@SubmitModal">
+    Key :
+    <Input @bind-Value="@entityConfig.Key" Disabled="@keyDisabled" />
+    Value :
+    <Input @bind-Value="@entityConfig.Value"  />
+    Comment :
+    <Input @bind-Value="@entityConfig.Comment"  />
+</Modal>
+
+@code {
+    private int page = 1;
+    private bool hasNext = false;
+    private List<EntityConfigDO> data = new();
+    private int totalNum;
+    private bool isLoading;
+    private string searchKey = "";
+    private bool editVisible = false;
+    private bool keyDisabled = false;
+    private EntityConfigDO entityConfig = new();
+    private ITable? table;
+
+    private Dictionary<string, string> titleMap = new Dictionary<string, string>{
+        {"Key", "Key"},
+        {"Value", "Value"},
+        {"IsActive", "是否生效"},
+        {"Creator", "创建者"},
+        {"Comment", "备注"},
+    };
+
+    private async Task SubmitModal() 
+    {
+        if (!string.IsNullOrEmpty(entityConfig.Key) && !string.IsNullOrEmpty(entityConfig.Value)) 
+        {
+            var req = new SaveConfigsRequest<EntityConfigDO>
+            {
+                Configs = new List<EntityConfigDO> { entityConfig }
+            };
+            var response = await httpClient.PostAsJsonAsync($"/api/manage/save-entity-config", req);
+            await httpHelper.HandleResponse(response, "保存失败", "保存成功", async () => {
+                await LoadEntityConfig();
+            });
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadEntityConfig();
+    }
+
+    private async Task Search(KeyboardEventArgs arg) 
+    {
+        if (arg.Code == "Enter" && !string.IsNullOrEmpty(searchKey)) 
+        {
+            page = 1;
+            await LoadEntityConfig();
+            table!.ResetData();
+        }
+    }
+
+    private async Task LoadEntityConfig()
+    {
+        isLoading = true;
+        var query = new Dictionary<string, string?>();
+        query["page"] = page.ToString();
+        query["size"] = "10";
+        query["key"] = searchKey;
+        var resp = await httpClient.GetAsync(QueryHelpers.AddQueryString("/api/manage/get-entity-config", query));
+        await httpHelper.HandleResponse<Page<EntityConfigDO>>(resp, "读取数据失败", data => {
+            this.hasNext = data.HasNext;
+            this.data = data.Items;
+            this.totalNum = (int)data.TotalCount;
+        });
+        isLoading = false;
+    }
+
+    private async Task OnChange(QueryModel<EntityConfigDO> queryModel)
+    {
+        if (page != queryModel.PageIndex)
+        {
+            page = queryModel.PageIndex;
+            await LoadEntityConfig();
+        }
+    }
+
+    private void AddNew()
+    {
+        entityConfig = new EntityConfigDO();
+        keyDisabled = false;
+        editVisible = true;
+    }
+
+    private void Edit(EntityConfigDO row)
+    {
+        entityConfig = new EntityConfigDO {
+            Key = row.Key,
+            Value = row.Value,
+            Comment = row.Comment,
+        };
+        keyDisabled = true;
+        editVisible = true;
+    }
+
+    private async Task Del(string key)
+    {
+        var resp = await httpClient.PostAsJsonAsync($"/api/manage/del-entity-config", new DelEntityConfigRequest{ Key = key });
+        await httpHelper.HandleResponse(resp, "删除失败", "已删除");
+        await LoadEntityConfig();
+    }
+
+    private void DefineColumns(string name, IFieldColumn column)
+    {
+        if (titleMap.ContainsKey(name)) 
+        {
+            switch (name) {
+                case "IsActive":
+                    ((Column<bool>)column).Title = titleMap[name];
+                    break;
+                default:
+                    ((Column<string>)column).Title = titleMap[name];
+                    break;
+            }
+        }
+    }
+}

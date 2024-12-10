@@ -158,7 +158,6 @@ public class RSSNotifyBilibili : RSSNotifyBase
 
     /// <summary>
     /// 动态转换成onebot消息
-    /// https://github.com/DIYgod/RSSHub/blob/master/lib/routes/bilibili/dynamic.ts
     /// </summary>
     /// <returns></returns>
     public List<OneBotMessage> BuildDynamicOneBotMessage(List<RSSItem> validItems)

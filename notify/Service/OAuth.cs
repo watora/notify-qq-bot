@@ -37,6 +37,10 @@ public class OAuth
                 {
                     claims.Add(new Claim(ClaimTypes.Role, Consts.RoleAdmin));
                 }
+                else if (configuration.GetSection("Auth:User").Get<List<string>>()?.Contains(userInfo.Login) ?? false)
+                {
+                    claims.Add(new Claim(ClaimTypes.Role, Consts.RoleUser));
+                }
                 context.Identity?.AddClaims(claims);
                 return;
             }

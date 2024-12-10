@@ -12,4 +12,10 @@ public class KVConfig
 
     [Column("value")]
     public required string Value { get; set; }
+
+    [Column("creator")]
+    public required string Creator { get; set; }
+
+    [Column("comment")]
+    public required string Comment { get; set; }
 }

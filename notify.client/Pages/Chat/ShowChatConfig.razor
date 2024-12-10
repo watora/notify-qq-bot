@@ -62,11 +62,6 @@
         await LoadChatConfig();
     }
 
-    private async Task ChangePage(int change)
-    {
-        page += change;
-        await LoadChatConfig();
-    }
     private async Task LoadChatConfig()
     {
         isLoading = true;

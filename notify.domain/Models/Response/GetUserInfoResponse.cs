@@ -15,4 +15,7 @@ public class GetUserInfoResponse
 
     [JsonPropertyName("avatar_url")]
     public string? AvatarUrl { get; set; }
+
+    [JsonPropertyName("role")]
+    public string? Role { get; set; }
 }

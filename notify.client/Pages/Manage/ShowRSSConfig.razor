@@ -9,7 +9,7 @@
 
 <PageHeader Class="site-page-header" Title="RSS配置管理" />
 
-<Table Loading="isLoading" TItem="RSSConfigDO" DataSource="data" PageSize="10" Total="totalNum" OnChange="OnChange">
+<Table @ref="table" Loading="isLoading" TItem="RSSConfigDO" DataSource="data" PageSize="10" Total="totalNum" OnChange="OnChange">
     <TitleTemplate>
         <Flex Justify="space-between">
             <Space style="width: 15%;">
@@ -56,6 +56,7 @@
     private int totalNum;
     private bool isLoading;
     private string channel = Consts.BilibiliLiveChannel;
+    private ITable? table;
 
     private Dictionary<string, string> titleMap = new Dictionary<string, string>{
         {"SubscribeId", "订阅对象Id"},
@@ -77,16 +78,12 @@
         await LoadRSSConfig();
     }
 
-    private async Task ChangePage(int change)
-    {
-        page += change;
-        await LoadRSSConfig();
-    }
-
     private async Task ChangeChannel(string value)
     {
         this.channel = value;
+        this.page = 1;
         await LoadRSSConfig();
+        table!.ResetData();
     }
 
     private async Task LoadRSSConfig()

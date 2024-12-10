@@ -1,4 +1,6 @@
 using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.Options;
+using Notify.Domain.Config.Options;
 using Notify.Utils;
 
 namespace Notify.Service.ChatBot;
@@ -10,6 +12,7 @@ public abstract class ChatBotBase
     protected HttpClient httpClient;
     protected IConfiguration configuration;
     protected IMemoryCache memoryCache;
+    protected IOptionsSnapshot<ChatBotOption> chatBotOption;
 
     public ChatBotBase(IServiceProvider sp, ILogger logger)
     {
@@ -17,6 +20,7 @@ public abstract class ChatBotBase
         this.logger = logger;
         httpClient = sp.GetRequiredService<IHttpClientFactory>().CreateClient();
         configuration = sp.GetRequiredService<IConfiguration>();
-        memoryCache = sp.GetRequiredService<IMemoryCache>(); 
+        memoryCache = sp.GetRequiredService<IMemoryCache>();
+        chatBotOption = sp.GetRequiredService<IOptionsSnapshot<ChatBotOption>>();
     }
 }

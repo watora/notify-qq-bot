@@ -12,9 +12,10 @@ public static class NotifyServiceRegister
         services.AddSingleton<OneBotApi>();
         services.AddSingleton<RSSNotifyBilibili>();
         services.AddSingleton<RSSNotifyYoutube>();
-        services.AddSingleton<ChatBotOpenAI>();
+        services.AddScoped<ChatBotOpenAI>();
         services.AddScoped<RSSManager>();
         services.AddScoped<ChatBotManager>();
+        services.AddScoped<EntityConfigManager>();
         services.AddScoped<OneBotEvent>();
         services.AddHostedService<RSSHostService>();
         return services;

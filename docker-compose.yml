@@ -22,7 +22,7 @@ services:
             - notify:/app/persist-keys
             - notify:/app/data
         healthcheck:    
-            test: ["CMD", "curl", "-f", "http://localhost:8080/api/manage/health"]
+            test: ["CMD", "curl", "-f", "http://localhost:80/api/manage/health"]
             interval: 30s
             timeout: 10s
             retries: 3

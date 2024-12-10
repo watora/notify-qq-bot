@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -44,6 +45,7 @@ public class UserController : ControllerBase
             resp.Id = auth.Principal.Identity!.Name;
             resp.Name = auth.Principal.Claims.FirstOrDefault(r => r.Type == "ShowName")?.Value;
             resp.AvatarUrl = auth.Principal.Claims.FirstOrDefault(r => r.Type == "Avatar")?.Value;
+            resp.Role = auth.Principal.Claims.FirstOrDefault(r => r.Type == ClaimTypes.Role)?.Value;
         }
         return new CommonResponse<GetUserInfoResponse>(resp);
     }

@@ -13,8 +13,8 @@ public class ChatBotOpenAI : ChatBotBase
 
     public ChatBotOpenAI(IServiceProvider sp, ILogger<ChatBotOpenAI> logger) : base(sp, logger)
     {
-        endpoint = configuration["OPENAI_ENDPOINT"] ?? "";
-        token = configuration["OPENAI_TOKEN"] ?? "";
+        endpoint = chatBotOption.Value.OpenAIEndPoint!;
+        token = chatBotOption.Value.OpenAIToken!;
         httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         if (!endpoint.EndsWith("/"))
         {

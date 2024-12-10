@@ -3,9 +3,9 @@ using System.Text.Json.Serialization;
 
 namespace Notify.Domain.Models.Request;
 
-public class SaveRSSConfigRequest
+public class SaveConfigsRequest<T>
 {
     [Required]
     [JsonPropertyName("configs")]
-    public required List<RSSConfigDO> Configs { get; set; }
+    public required List<T> Configs { get; set; }
 }

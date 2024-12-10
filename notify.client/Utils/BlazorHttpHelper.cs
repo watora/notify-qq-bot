@@ -14,7 +14,7 @@ public class BlazorHttpHelper
         this.messageService = messageService;
     }
 
-    public async Task HandleResponse(HttpResponseMessage resp, string failMessage, string successMessage, Action? onSuccess = null)
+    public async Task HandleResponse(HttpResponseMessage resp, string failMessage, string successMessage, Func<Task>? onSuccess = null)
     {
         if (!resp.IsSuccessStatusCode)
         {
@@ -34,7 +34,7 @@ public class BlazorHttpHelper
             }
             if (onSuccess != null) 
             {
-                onSuccess();
+                await onSuccess();
             }
         }
         else

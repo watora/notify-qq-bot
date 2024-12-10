@@ -7,6 +7,7 @@ using Notify.Service.RSS;
 using Notify.Domain.Models;
 using Notify.Domain.Models.Request;
 using Notify.Domain.Models.Response;
+using Notify.Repository.Entity;
 
 namespace notify.Controllers;
 
@@ -19,15 +20,18 @@ public class ManageController : ControllerBase
     private OneBotApi oneBotApi;
     private RSSManager rssManager;
     private ChatBotManager chatBotManager;
+    private EntityConfigManager entityConfigManager;
     private ILogger<ManageController> logger;
 
-    public ManageController(RSSNotifyYoutube rssNotifyYoutube, OneBotApi oneBotApi, RSSManager rssManager, ChatBotManager chatBotManager, ILogger<ManageController> logger)
+    public ManageController(IServiceProvider sp, ILogger<ManageController> logger)
     {
-        this.rssNotifyYoutube = rssNotifyYoutube;
-        this.oneBotApi = oneBotApi;
-        this.rssManager = rssManager;
+
+        rssNotifyYoutube = sp.GetRequiredService<RSSNotifyYoutube>();
+        oneBotApi = sp.GetRequiredService<OneBotApi>();
+        rssManager = sp.GetRequiredService<RSSManager>();
         this.logger = logger;
-        this.chatBotManager = chatBotManager;
+        chatBotManager = sp.GetRequiredService<ChatBotManager>();
+        entityConfigManager = sp.GetRequiredService<EntityConfigManager>();
     }
 
     [AllowAnonymous]
@@ -37,25 +41,55 @@ public class ManageController : ControllerBase
         return Ok();
     }
 
-    [AllowAnonymous]
-    [HttpGet("test/youtube/live")]
-    public async Task<ActionResult<OneBotMessage>> TestYoutube([FromQuery(Name = "subscribe_id")] string subscribeId)
+    #region entity_config
+    [HttpGet("get-entity-config")]
+    public async Task<ActionResult<CommonResponse<Page<EntityConfigDO>>>> GetEntityConfig([FromQuery] int page, [FromQuery] int size, [FromQuery] string? key)
     {
-        var channel = rssNotifyYoutube.GetLiveInfo(subscribeId);
-        if (channel == null)
+        try
         {
-            return NoContent();
+            (var configs, var total) = await entityConfigManager.GetEntityConfig(page, size, key);
+            return new CommonResponse<Page<EntityConfigDO>>(new Page<EntityConfigDO>(configs, page * size < total, total));
         }
-        var msg = rssNotifyYoutube.BuildLiveOneBotMessage(channel);
-        if (msg == null)
+        catch (Exception e)
         {
-            return NoContent();
+            logger.LogError(e, "failed to get entity config");
+            return new CommonResponse<Page<EntityConfigDO>>(ErrorCodes.GetEntityConfigError);
         }
-        await oneBotApi.SendMessage("153624354", Consts.MsgTargetTypeGroup, msg);
-        return msg;
     }
 
-#region rss_config
+    [HttpPost("save-entity-config")]
+    public async Task<ActionResult<CommonResponse>> SaveEntityConfig([FromBody] SaveConfigsRequest<EntityConfigDO> request)
+    {
+        var creator = HttpContext.User.Identity!.Name!;
+        try
+        {
+            await entityConfigManager.SaveEntityConfig(request.Configs, creator);
+            return new CommonResponse();
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e, "failed to save rss config");
+            return new CommonResponse(ErrorCodes.SaveEntityConfigError);
+        }
+    }
+
+    [HttpPost("del-entity-config")]
+    public async Task<CommonResponse> DelEntityConfig([FromBody] DelEntityConfigRequest request)
+    {
+        try
+        {
+            await entityConfigManager.DeleteEntityConfig(request.Key);
+            return new CommonResponse();
+        }
+        catch (Exception e)
+        {
+            logger.LogError(e, "failed to delete entity config");
+            return new CommonResponse(ErrorCodes.SaveEntityConfigError);
+        }
+    }
+    #endregion
+
+    #region rss_config
     [HttpGet("get-rss-config/{id}")]
     public async Task<ActionResult<CommonResponse<RSSConfigDO>>> GetRSSConfigById([FromRoute] long id)
     {
@@ -92,7 +126,7 @@ public class ManageController : ControllerBase
     }
 
     [HttpPost("save-rss-config")]
-    public async Task<ActionResult<CommonResponse>> SaveRSSConfig([FromBody] SaveRSSConfigRequest request)
+    public async Task<ActionResult<CommonResponse>> SaveRSSConfig([FromBody] SaveConfigsRequest<RSSConfigDO> request)
     {
         try
         {
@@ -124,9 +158,9 @@ public class ManageController : ControllerBase
             return new CommonResponse(ErrorCodes.SaveRSSConfigError);
         }
     }
-#endregion
+    #endregion
 
-#region chat_config
+    #region chat_config
     [HttpGet("get-chat-config/{id}")]
     public async Task<ActionResult<CommonResponse<ChatConfigDO>>> GetChatConfigById([FromRoute] long id)
     {
@@ -163,7 +197,7 @@ public class ManageController : ControllerBase
     }
 
     [HttpPost("save-chat-config")]
-    public async Task<ActionResult<CommonResponse>> SaveChatConfig([FromBody] SaveChatConfigRequest request)
+    public async Task<ActionResult<CommonResponse>> SaveChatConfig([FromBody] SaveConfigsRequest<ChatConfigDO> request)
     {
         try
         {
@@ -195,5 +229,5 @@ public class ManageController : ControllerBase
             return new CommonResponse(ErrorCodes.SaveChatConfigError);
         }
     }
-#endregion
+    #endregion
 }

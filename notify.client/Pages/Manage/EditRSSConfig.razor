@@ -77,13 +77,14 @@
 
     private async Task submit(EditContext editContext)
     {
-        var req = new SaveRSSConfigRequest
+        var req = new SaveConfigsRequest<RSSConfigDO>
         {
             Configs = new List<RSSConfigDO> { config }
         };
         var response = await httpClient.PostAsJsonAsync($"/api/manage/save-rss-config", req);
         await httpHelper.HandleResponse(response, "保存失败", "", () => {
             navigationManager.NavigateTo("/rss/config-show", false);
+            return Task.CompletedTask;
         });
     }
 }

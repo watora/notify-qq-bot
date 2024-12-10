@@ -3,9 +3,9 @@ using System.Text.Json.Serialization;
 
 namespace Notify.Domain.Models.Request;
 
-public class SaveChatConfigRequest
+public class DelEntityConfigRequest
 {
     [Required]
-    [JsonPropertyName("configs")]
-    public required List<ChatConfigDO> Configs { get; set; }
+    [JsonPropertyName("key")]
+    public required string Key { get; set; }
 }

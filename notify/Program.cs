@@ -9,6 +9,8 @@ using Notify.Service.Hubs;
 using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Configuration.AddEntityConfigurationSource();
+builder.SetConfiguration();
 
 // Add services to the container.
 builder.Services.AddControllers();
@@ -34,7 +36,7 @@ builder.Services.AddAuthentication(opt =>
 }).AddCookie(opt =>
 {
     opt.Cookie.Name = "auth_info";
-    //opt.LoginPath = "/login";
+    opt.LoginPath = "/";
     opt.ExpireTimeSpan = TimeSpan.FromDays(14);
     opt.Events.OnRedirectToLogin = context =>
     {

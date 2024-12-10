@@ -80,13 +80,14 @@
 
     private async Task submit(EditContext editContext)
     {
-        var req = new SaveChatConfigRequest
+        var req = new SaveConfigsRequest<ChatConfigDO>
         {
             Configs = new List<ChatConfigDO> { config }
         };
         var response = await httpClient.PostAsJsonAsync($"/api/manage/save-chat-config", req);
         await httpHelper.HandleResponse(response, "保存失败", "", () => {
             navigationManager.NavigateTo("/chat/config-show", false);
+            return Task.CompletedTask;
         });
     }
 }
