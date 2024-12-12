@@ -9,6 +9,7 @@ public static class Consts
     public const string BilibiliDynamicChannel = "bilibili_dynamic";
     public const string BilibiliLiveChannel = "bilibili_live";
     public const string YoutubeLiveChannel = "youtube_live";
+    public const string CopymangaUpdateChannel = "copymanga_update";
     public const string XDynamicChannel = "x_dynamic";
 
 

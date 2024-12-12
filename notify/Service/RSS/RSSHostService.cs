@@ -35,9 +35,9 @@ public class RSSHostService : IHostedService
             var sw = new Stopwatch();
             sw.Start();
             logger.LogInformation("rss notify loop start");
-            using var scope = serviceProvider.CreateScope();
-            await handleBilibili(scope);
-            await handleYoutube(scope);
+            await handleBilibili(serviceProvider);
+            await handleYoutube(serviceProvider);
+            await handleCopymanga(serviceProvider);
             sw.Stop();
             logger.LogInformation($"rss notify loop end, used:{sw.ElapsedMilliseconds}ms");
             firstCheck = false;
@@ -49,17 +49,23 @@ public class RSSHostService : IHostedService
 
     }
 
-    private async Task handleBilibili(IServiceScope scope)
+    private async Task handleBilibili(IServiceProvider provider)
     {
-        var bilibili = scope.ServiceProvider.GetRequiredService<RSSNotifyBilibili>();
+        var bilibili = provider.GetRequiredService<RSSNotifyBilibili>();
         await bilibili.CheckLiveStatusAndSendMessage(!firstCheck);
         await bilibili.CheckNewDynamicAndSendMessage(!firstCheck);
     }
 
-    private async Task handleYoutube(IServiceScope scope) 
+    private async Task handleYoutube(IServiceProvider provider) 
     {
-        var youtube = scope.ServiceProvider.GetRequiredService<RSSNotifyYoutube>();
+        var youtube = provider.GetRequiredService<RSSNotifyYoutube>();
         await youtube.CheckLiveStatusAndSendMessage(!firstCheck);
+    }
+
+    private async Task handleCopymanga(IServiceProvider provider) 
+    {
+        var copymanga = provider.GetRequiredService<RSSNotifyCopymanga>();
+        await copymanga.CheckMangaUpdateAndSendMessage(!firstCheck);
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
