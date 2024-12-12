@@ -13,7 +13,7 @@ public class ChatBotOpenAI : ChatBotBase
 
     public ChatBotOpenAI(IServiceProvider sp, ILogger<ChatBotOpenAI> logger) : base(sp, logger)
     {
-        endpoint = chatBotOption.Value.OpenAIEndPoint!;
+        endpoint = chatBotOption.Value.OpenAIEndpoint!;
         token = chatBotOption.Value.OpenAIToken!;
         httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
         if (!endpoint.EndsWith("/"))
@@ -30,7 +30,7 @@ public class ChatBotOpenAI : ChatBotBase
     /// <param name="input"></param>
     private void FillHistoryChat(string uniqueKey, OpenAIChatInput input)
     {
-        var key = uniqueKey + input.Model;
+        var key =  $"{input.Model}_{uniqueKey}";
         var messages = memoryCache.Get<List<OpenAIChatInputMessage>>(key);
         if (messages != null)
         {
@@ -52,12 +52,11 @@ public class ChatBotOpenAI : ChatBotBase
     {
         if (chatCompletion != null && chatCompletion.Choices.Count > 0)
         {
-            var key = uniqueKey + chatCompletion.Model;
+            var key = $"{chatCompletion.Model}_{uniqueKey}";
             var messages = memoryCache.Get<List<OpenAIChatInputMessage>>(key);
             var msg = chatCompletion.Choices[0].Message;
             if (messages != null)
             {
-                chatCompletion.ContextLength = messages.Count;
                 messages.Add(new OpenAIChatInputMessage
                 {
                     Role = msg.Role,

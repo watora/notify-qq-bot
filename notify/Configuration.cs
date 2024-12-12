@@ -16,9 +16,19 @@ public static class ProgramConfiguration
 
     public static void SetConfiguration(this WebApplicationBuilder builder)
     {
-        builder.Services.Configure<ChatBotOption>(opt => {
-            opt.OpenAIEndPoint = builder.Configuration["OPENAI_ENDPOINT"];
-            opt.OpenAIToken = builder.Configuration["OPENAI_TOKEN"];
+        var configuration = builder.Configuration;
+        builder.Services.Configure<ChatBotOption>(opt =>
+        {
+            opt.OpenAIEndpoint = configuration["OPENAI_ENDPOINT"];
+            opt.OpenAIToken = configuration["OPENAI_TOKEN"];
+            opt.AnthropicEndpoint = configuration["ANTHROPIC_ENDPOINT"];
+            opt.AnthropicToken = configuration["ANTHROPIC_TOKEN"];
+        });
+        builder.Services.Configure<AuthOption>(opt =>
+        {
+            opt.Admin = configuration.GetSection("Auth:Admin").Get<List<string>>() ?? new List<string>();
+            opt.User = configuration.GetSection("Auth:User").Get<List<string>>() ?? new List<string>();
+            opt.Owner = configuration["Owner"] ?? "";
         });
     }
 }

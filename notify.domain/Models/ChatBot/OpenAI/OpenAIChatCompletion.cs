@@ -18,9 +18,6 @@ public class OpenAIChatCompletion
 
     [JsonPropertyName("usage")]
     public OpenAIChatCompletionUsage? Usage { get; set; }
-
-    [JsonIgnore]
-    public int ContextLength { get; set; }
 }
 
 public class OpenAIChatCompletionChoice

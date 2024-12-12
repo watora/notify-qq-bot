@@ -13,6 +13,7 @@ public static class NotifyServiceRegister
         services.AddSingleton<RSSNotifyBilibili>();
         services.AddSingleton<RSSNotifyYoutube>();
         services.AddScoped<ChatBotOpenAI>();
+        services.AddScoped<ChatBotAnthropic>();
         services.AddScoped<RSSManager>();
         services.AddScoped<ChatBotManager>();
         services.AddScoped<EntityConfigManager>();

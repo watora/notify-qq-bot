@@ -4,24 +4,30 @@ using Notify.Domain.Models;
 using Notify.Domain.Utils;
 using Notify.Service.ChatBot;
 using Notify.Service.Manager;
+using Notify.Utils;
+using SixLabors.ImageSharp;
 
 namespace Notify.Service.OneBot;
 
 public class OneBotEvent
 {
     private ChatBotOpenAI chatBotOpenAI;
+    private ChatBotAnthropic chatBotAnthropic;
     private ILogger<OneBotEvent> logger;
     private OneBotApi oneBotApi;
     private ChatBotManager chatBotManager;
     private IHostEnvironment hostEnvironment;
+    private HttpClient httpClient;
 
-    public OneBotEvent(ChatBotOpenAI chatBotOpenAI, OneBotApi oneBotApi, ILogger<OneBotEvent> logger, ChatBotManager chatBotManager, IHostEnvironment hostEnvironment)
+    public OneBotEvent(IServiceProvider provider, ILogger<OneBotEvent> logger, IHostEnvironment hostEnvironment)
     {
-        this.chatBotOpenAI = chatBotOpenAI;
+        chatBotOpenAI = provider.GetRequiredService<ChatBotOpenAI>();
+        chatBotAnthropic = provider.GetRequiredService<ChatBotAnthropic>();
         this.logger = logger;
-        this.oneBotApi = oneBotApi;
-        this.chatBotManager = chatBotManager;
+        oneBotApi = provider.GetRequiredService<OneBotApi>();
+        chatBotManager = provider.GetRequiredService<ChatBotManager>();
         this.hostEnvironment = hostEnvironment;
+        httpClient = provider.GetRequiredService<HttpClient>();
     }
 
     /// <summary>
@@ -114,6 +120,10 @@ public class OneBotEvent
         {
             msg = await HandleOpenAIChatMessage(onebotEvent, chatConfig);
         }
+        else if (chatConfig.Provider == Consts.ChatProviderAnthropic)
+        {
+            msg = await HandleAnthropicChatMessage(onebotEvent, chatConfig);
+        }
         if (msg != null)
         {
             if (onebotEvent.MessageType == Consts.MsgTargetTypeGroup)
@@ -128,7 +138,7 @@ public class OneBotEvent
     }
 
     /// <summary>
-    /// 处理命令消息
+    /// 处理OpenAI聊天消息
     /// </summary>
     private async Task<OneBotMessage?> HandleOpenAIChatMessage(OneBotEventMessage onebotEvent, ChatConfigDO chatConfig)
     {
@@ -150,6 +160,77 @@ public class OneBotEvent
             return BusyMsg();
         }
         return null;
+    }
+
+    /// <summary>
+    /// 处理Anthropic聊天消息
+    /// </summary>
+    private async Task<OneBotMessage?> HandleAnthropicChatMessage(OneBotEventMessage onebotEvent, ChatConfigDO chatConfig)
+    {
+        var input = new AnthropicChatInput
+        {
+            Model = chatConfig.Model!,
+            Messages = new List<AnthropicChatInputMessage>() { await ConvertToAnthropicChatInputMessage(onebotEvent) },
+            MaxTokens = 2048,
+        };
+        try
+        {
+            var chatResponse = await chatBotAnthropic.Chat(chatConfig.TargetId!, input);
+            if (chatResponse != null)
+            {
+                return ConvertOpenAIChatCompletionToOneBotMessage(onebotEvent, chatResponse);
+            }
+        }
+        catch (LockTimeoutException)
+        {
+            return BusyMsg();
+        }
+        return null;
+    }
+
+
+    /// <summary>
+    /// 转换onebot事件到anthropic的输入
+    /// </summary>
+    /// <param name="onebotEvent"></param>
+    /// <returns></returns>
+    private async Task<AnthropicChatInputMessage> ConvertToAnthropicChatInputMessage(OneBotEventMessage onebotEvent)
+    {
+        var newMsg = new AnthropicChatInputMessage
+        {
+            Role = "user",
+            Content = new List<AnthropicChatInputMessageContent>()
+        };
+        foreach (var item in onebotEvent.Message)
+        {
+            if (item.Type == OneBotMessageType.Text.ToCustomString())
+            {
+                newMsg.Content.Add(new AnthropicChatInputMessageContent
+                {
+                    Type = "text",
+                    Text = item.Data.Text!.Trim()
+                });
+            }
+            else if (item.Type == OneBotMessageType.CQImage.ToCustomString())
+            {
+                var bytes = await httpClient.GetByteArrayAsync(item.Data.Url!);
+                var mediaType = ImageHelper.GetMediaType(bytes);
+                if (!string.IsNullOrEmpty(mediaType)) 
+                {
+                    newMsg.Content.Add(new AnthropicChatInputMessageContent
+                    {
+                        Type = "image",
+                        Source = new AnthropicChatInputContentSource
+                        {
+                            Type = "base64",
+                            MediaType = mediaType,
+                            Data = Convert.ToBase64String(bytes)
+                        }
+                    });
+                }
+            }
+        }
+        return newMsg;
     }
 
     /// <summary>
@@ -212,17 +293,6 @@ public class OneBotEvent
                 Id = onebotEvent.MessageId.ToString()
             }
         });
-        if (hostEnvironment.IsDevelopment())
-        {
-            obMsg.Items.Add(new OneBotMessageItem
-            {
-                Type = OneBotMessageType.Text.ToCustomString(),
-                Data = new OneBotMessageItemData
-                {
-                    Text = $"🔹model:{chatCompletion.Model} contextLength:{chatCompletion.ContextLength}🔹\n"
-                }
-            });
-        }
         // 回复的内容
         obMsg.Items.Add(new OneBotMessageItem
         {
@@ -232,6 +302,41 @@ public class OneBotEvent
                 Text = choice.Message.Content,
             }
         });
+        return obMsg;
+    }
+
+    /// <summary>
+    /// 转换anthropic的结果到onebot消息
+    /// </summary>
+    /// <returns></returns>
+    public OneBotMessage? ConvertOpenAIChatCompletionToOneBotMessage(OneBotEventMessage onebotEvent, AnthropicChatResponse chatResponse)
+    {
+        if (chatResponse.Content.Count == 0)
+        {
+            return null;
+        }
+        var obMsg = new OneBotMessage();
+        // 对原来消息的引用
+        obMsg.Items.Add(new OneBotMessageItem
+        {
+            Type = OneBotMessageType.CQReply.ToCustomString(),
+            Data = new OneBotMessageItemData
+            {
+                Id = onebotEvent.MessageId.ToString()
+            }
+        });
+        // 回复的内容
+        foreach(var item in chatResponse.Content.Where(r => r.Type == "text")) 
+        {
+            obMsg.Items.Add(new OneBotMessageItem
+            {
+                Type = OneBotMessageType.Text.ToCustomString(),
+                Data = new OneBotMessageItemData
+                {
+                    Text = item.Text,
+                }
+            });
+        }
         return obMsg;
     }
 
