@@ -24,7 +24,7 @@ public class RSSNotifyCopymanga : RSSNotifyBase
         {
             var now = DateTimeOffset.Now.ToUnixTimeSeconds();
             var groups = await notifyContext.RSSConfig
-                .Where(r => r.SubscribeChannel == Consts.CopyMangaUpdateChannel && r.IsActive && now > r.ExpCheckTime)
+                .Where(r => r.SubscribeChannel == Consts.CopymangaUpdateChannel && r.IsActive && now > r.ExpCheckTime)
                 .GroupBy(r => r.SubscribeId)
                 .ToListAsync();
             foreach (var group in groups)
