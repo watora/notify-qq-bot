@@ -53,9 +53,8 @@ public class OneBotController : ControllerBase
         catch (Exception ex)
         {
             logger.LogError(ex, "handle one bot message err");
-            return Problem();
         }
-        return Ok();
+        return NoContent();
     }
 
     [HttpGet("test")]

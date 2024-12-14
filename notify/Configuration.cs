@@ -26,8 +26,8 @@ public static class ProgramConfiguration
         });
         builder.Services.Configure<AuthOption>(opt =>
         {
-            opt.Admin = configuration.GetSection("Auth:Admin").Get<List<string>>() ?? new List<string>();
-            opt.User = configuration.GetSection("Auth:User").Get<List<string>>() ?? new List<string>();
+            opt.Admin = configuration["Admin"]?.Split(",").ToList() ?? new List<string>();
+            opt.User = configuration["User"]?.Split(",").ToList() ?? new List<string>();
             opt.Owner = configuration["Owner"] ?? "";
         });
         builder.Services.Configure<OneBotOption>(opt => {
