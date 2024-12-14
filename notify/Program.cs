@@ -11,6 +11,10 @@ using Serilog;
 var builder = WebApplication.CreateBuilder(args);
 builder.Configuration.AddEntityConfigurationSource();
 builder.SetConfiguration();
+if (!builder.Environment.IsDevelopment()) 
+{
+    builder.WebHost.UseStaticWebAssets();
+}
 
 // Add services to the container.
 builder.Services.AddControllers();
@@ -67,10 +71,6 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
     };
 });
 builder.Services.AddSerilog((sp, opt) => opt.ReadFrom.Configuration(builder.Configuration));
-if (!builder.Environment.IsDevelopment()) 
-{
-    builder.WebHost.UseStaticWebAssets();
-}
 
 var app = builder.Build();
 
