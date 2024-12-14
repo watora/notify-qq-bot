@@ -15,6 +15,8 @@ services:
             - OPENAI_TOKEN=${OPENAI_TOKEN}
             - OPENAI_ENDPOINT=${OPENAI_ENDPOINT}
             - ONEBOT_EVENT_SECRET=${ONEBOT_EVENT_SECRET}
+            - ANTHROPIC_TOKEN=${ANTHROPIC_TOKEN}
+            - ANTHROPIC_ENDPOINT=${ANTHROPIC_ENDPOINT}
         depends_on:
             - rsshub
             - napcat
