@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.AspNetCore.OutputCaching;
 using Notify.Domain.Config;
 using Notify.Domain.Models;
 using Notify.Domain.Utils;
@@ -13,8 +14,8 @@ public class OneBotApi
 
     public OneBotApi(IHttpClientFactory httpClientFactory, IConfiguration configuration, ILogger<OneBotApi> logger)
     {
-        this.httpClient = httpClientFactory.CreateClient();
-        this.oneBotUrl = configuration["OneBot:Url"] ?? "";
+        httpClient = httpClientFactory.CreateClient();
+        oneBotUrl = configuration["OneBot:Url"] ?? "";
         this.logger = logger;
     }
 
@@ -37,7 +38,6 @@ public class OneBotApi
             user_id = userId,
             message = message.Items,
         };
-        Console.WriteLine($"send_msg  req:{JsonSerializer.Serialize(req)}");
         var resp = await this.httpClient.PostAsJsonAsync($"{this.oneBotUrl}/send_msg", req);
         if (resp.IsSuccessStatusCode)
         {
@@ -50,46 +50,26 @@ public class OneBotApi
             logger.LogWarning($"send_msg failed, code:{resp.StatusCode}");
         }
         return false;
-
     }
 
     /// <summary>
-    /// QQ是否在线
+    /// 根据消息id获取消息内容
     /// </summary>
     /// <returns></returns>
-    public async Task<bool> IsOnline()
+    public async Task<OneBotEventMessage?> GetMessageById(string messageId) 
     {
-        var resp = await httpClient.GetAsync($"{oneBotUrl}/get_status");
-        if (resp.IsSuccessStatusCode)
+        var resp = await httpClient.GetAsync($"{this.oneBotUrl}/get_msg?message_id={messageId}");
+        if (resp.IsSuccessStatusCode) 
         {
-            var def = new { online = false, good = false };
-            var respObj = NotifyExtension.DeserializeAnonymousType(await resp.Content.ReadAsStringAsync(), def);
-            return respObj.good && respObj.online;
+            var content = await resp.Content.ReadAsStringAsync();
+            var respObj = JsonSerializer.Deserialize<OneBotResp<OneBotEventMessage>>(content);
+            if (respObj == null || respObj.RetCode != 0) 
+            {
+                logger.LogWarning($"get message error, content: {content}");
+                return null;
+            }
+            return respObj.Data;
         }
-        else
-        {
-            logger.LogWarning($"get_status failed, code:{resp.StatusCode}");
-        }
-        return false;
-    }
-
-    /// <summary>
-    /// 获取当前登录信息
-    /// </summary>
-    /// <returns></returns>
-    public async Task<(long, string)> GetLoginInfo()
-    {
-        var resp = await httpClient.GetAsync($"{oneBotUrl}/get_login_info");
-        if (resp.IsSuccessStatusCode)
-        {
-            var def = new { user_id = 0L, nickname = "" };
-            var respObj = NotifyExtension.DeserializeAnonymousType(await resp.Content.ReadAsStringAsync(), def);
-            return (respObj.user_id, respObj.nickname);
-        }
-        else
-        {
-            logger.LogWarning($"get_login_info failed, code:{resp.StatusCode}");
-        }
-        return (0, "");
+        return null;
     }
 }

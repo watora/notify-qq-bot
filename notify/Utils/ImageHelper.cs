@@ -11,18 +11,18 @@ public static class ImageHelper
         var formatString = "";
         if (format != null)
         {
-            switch (format.Name)
+            switch (format.Name.ToLower())
             {
-                case "Jpeg":
+                case "jpeg":
                     formatString = "image/jpeg";
                     break;
-                case "Png":
+                case "png":
                     formatString = "image/png";
                     break;
-                case "Gif":
+                case "gif":
                     formatString = "image/gif";
                     break;
-                case "WebP":
+                case "webp":
                     formatString = "image/webp";
                     break;
             }

@@ -1,9 +1,10 @@
 using System.Security.Cryptography;
 using System.Text;
 using Microsoft.AspNetCore.Mvc;
-using Notify.Domain.Models;
+using Microsoft.Extensions.Options;
+using Notify.Domain.Config.Options;
 using Notify.Service.OneBot;
-using SQLitePCL;
+using Notify.Service.RSS;
 
 namespace notify.Controllers;
 
@@ -12,18 +13,14 @@ namespace notify.Controllers;
 public class OneBotController : ControllerBase
 {
     private OneBotEvent oneBotEvent;
-    private IConfiguration configuration;
     private string secret;
     private ILogger<OneBotController> logger;
-    private IHostEnvironment hostEnvironment;
 
-    public OneBotController(OneBotEvent oneBotEvent, IConfiguration configuration, ILogger<OneBotController> logger, IHostEnvironment hostEnvironment)
+    public OneBotController(OneBotEvent oneBotEvent, IOptionsSnapshot<OneBotOption> onebotOption, ILogger<OneBotController> logger)
     {
         this.oneBotEvent = oneBotEvent;
-        this.configuration = configuration;
-        secret = configuration["ONEBOT_EVENT_SECRET"] ?? "";
+        secret = onebotOption.Value.PostSecret ?? "";
         this.logger = logger;
-        this.hostEnvironment = hostEnvironment;
     }
 
     [HttpPost("event")]
@@ -43,7 +40,7 @@ public class OneBotController : ControllerBase
             var secretBytes = Encoding.UTF8.GetBytes(secret);
             var hmacsha1 = new HMACSHA1(secretBytes);
             var calcSign = hmacsha1.ComputeHash(Encoding.UTF8.GetBytes(rawBody));
-            if ($"sha1={Encoding.UTF8.GetString(calcSign)}" != sign)
+            if (!string.Equals($"sha1={Convert.ToHexString(calcSign)}", sign, StringComparison.OrdinalIgnoreCase))
             {
                 logger.LogInformation($"one bot event invalid sign:{sign}");
                 return Unauthorized();
@@ -58,6 +55,13 @@ public class OneBotController : ControllerBase
             logger.LogError(ex, "handle one bot message err");
             return Problem();
         }
+        return Ok();
+    }
+
+    [HttpGet("test")]
+    public async Task<ActionResult> Test([FromServices] RSSNotifyCopymanga copymanga) 
+    {
+        await copymanga.CheckMangaUpdateAndSendMessage(true);
         return Ok();
     }
 }

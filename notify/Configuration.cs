@@ -30,5 +30,9 @@ public static class ProgramConfiguration
             opt.User = configuration.GetSection("Auth:User").Get<List<string>>() ?? new List<string>();
             opt.Owner = configuration["Owner"] ?? "";
         });
+        builder.Services.Configure<OneBotOption>(opt => {
+            opt.PostSecret = configuration["ONEBOT_EVENT_SECRET"] ?? "";
+            opt.OneBotEndpoint = configuration["OneBot:Url"] ?? "";
+        });
     }
 }

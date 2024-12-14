@@ -11,7 +11,7 @@ public class ChatBotAnthropic : ChatBotBase
     private string endpoint;
     private string token;
 
-    public ChatBotAnthropic(IServiceProvider sp, ILogger logger) : base(sp, logger)
+    public ChatBotAnthropic(IServiceProvider sp, ILogger<ChatBotAnthropic> logger) : base(sp, logger)
     {
         endpoint = chatBotOption.Value.AnthropicEndpoint!;
         token = chatBotOption.Value.AnthropicToken!;
@@ -70,11 +70,11 @@ public class ChatBotAnthropic : ChatBotBase
                     Role = chatResponse.Role,
                     Content = inputContent,
                 });
-                // 当存储条数>100时，丢弃前50条
+                // 当存储条数>50时，丢弃前20条
                 if (messages.Count > 100)
                 {
                     logger.LogInformation($"[{key}]chat history exceed limit, drop");
-                    messages.RemoveRange(0, 50);
+                    messages.RemoveRange(0, 20);
                 }
             }
         }
@@ -95,13 +95,13 @@ public class ChatBotAnthropic : ChatBotBase
         return await Extension.Lock(uniqueKey, async () =>
         {
             FillHistoryChat(uniqueKey, input);
-            logger.LogDebug($"call chat completion, req:{JsonSerializer.Serialize(input)}");
+            logger.LogDebug($"call chat, req:{JsonSerializer.Serialize(input)}");
             var resp = await httpClient.PostAsJsonAsync("v1/messages", input);
             var respStr = await resp.Content.ReadAsStringAsync();
-            logger.LogDebug($"call chat completion, resp:{respStr}");
+            logger.LogDebug($"call chat, resp:{respStr}");
             if (!resp.IsSuccessStatusCode)
             {
-                logger.LogInformation($"call openai chat completions failed, code:{resp.StatusCode}");
+                logger.LogInformation($"call anthropic chat failed, code:{resp.StatusCode}");
                 return null;
             }
             var chatResponse = JsonSerializer.Deserialize<AnthropicChatResponse>(respStr);

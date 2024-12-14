@@ -104,6 +104,40 @@ public class OneBotEvent
     }
 
     /// <summary>
+    /// 展开消息里引用的内容 不支持嵌套引用
+    /// </summary>
+    /// <returns></returns>
+    private async Task<bool> ExpandReferenceMessage(OneBotEventMessage onebotEvent)
+    {
+        var expanded = new List<OneBotMessageItem>();
+        foreach (var item in onebotEvent.Message)
+        {
+            if (item.Type == OneBotMessageType.CQReply.ToCustomString())
+            {
+                if (!string.IsNullOrEmpty(item.Data.Id))
+                {
+                    var reference = await oneBotApi.GetMessageById(item.Data.Id);
+                    if (reference != null)
+                    {
+                        var nested = reference.Message.Any(r => r.Type == OneBotMessageType.CQReply.ToCustomString());
+                        if (nested)
+                        {
+                            return true;
+                        }
+                        expanded.AddRange(reference.Message);
+                    }
+                }
+            }
+            else
+            {
+                expanded.Add(item);
+            }
+        }
+        onebotEvent.Message = expanded;
+        return false;
+    }
+
+    /// <summary>
     /// 处理聊天事件
     /// </summary>
     /// <param name="onebotEvent"></param>
@@ -116,13 +150,21 @@ public class OneBotEvent
             return;
         }
         OneBotMessage? msg = null;
-        if (chatConfig.Provider == Consts.ChatProviderOpenAI)
+        var nested = await ExpandReferenceMessage(onebotEvent);
+        if (nested)
         {
-            msg = await HandleOpenAIChatMessage(onebotEvent, chatConfig);
+            msg = TextMsg(onebotEvent, "不支持包含嵌套引用的消息");
         }
-        else if (chatConfig.Provider == Consts.ChatProviderAnthropic)
+        else
         {
-            msg = await HandleAnthropicChatMessage(onebotEvent, chatConfig);
+            if (chatConfig.Provider == Consts.ChatProviderOpenAI)
+            {
+                msg = await HandleOpenAIChatMessage(onebotEvent, chatConfig);
+            }
+            else if (chatConfig.Provider == Consts.ChatProviderAnthropic)
+            {
+                msg = await HandleAnthropicChatMessage(onebotEvent, chatConfig);
+            }
         }
         if (msg != null)
         {
@@ -149,7 +191,7 @@ public class OneBotEvent
         };
         try
         {
-            var completion = await chatBotOpenAI.ChatCompletion(chatConfig.TargetId!, input);
+            var completion = await chatBotOpenAI.ChatCompletion($"{chatConfig.TargetType}_{chatConfig.TargetId}", input);
             if (completion != null)
             {
                 return ConvertOpenAIChatCompletionToOneBotMessage(onebotEvent, completion);
@@ -157,7 +199,7 @@ public class OneBotEvent
         }
         catch (LockTimeoutException)
         {
-            return BusyMsg();
+            return TextMsg(onebotEvent, "处理中，请勿重复提交");
         }
         return null;
     }
@@ -175,7 +217,7 @@ public class OneBotEvent
         };
         try
         {
-            var chatResponse = await chatBotAnthropic.Chat(chatConfig.TargetId!, input);
+            var chatResponse = await chatBotAnthropic.Chat($"{chatConfig.TargetType}_{chatConfig.TargetId}", input);
             if (chatResponse != null)
             {
                 return ConvertOpenAIChatCompletionToOneBotMessage(onebotEvent, chatResponse);
@@ -183,7 +225,7 @@ public class OneBotEvent
         }
         catch (LockTimeoutException)
         {
-            return BusyMsg();
+            return TextMsg(onebotEvent, "处理中，请勿重复提交");
         }
         return null;
     }
@@ -215,7 +257,7 @@ public class OneBotEvent
             {
                 var bytes = await httpClient.GetByteArrayAsync(item.Data.Url!);
                 var mediaType = ImageHelper.GetMediaType(bytes);
-                if (!string.IsNullOrEmpty(mediaType)) 
+                if (!string.IsNullOrEmpty(mediaType))
                 {
                     newMsg.Content.Add(new AnthropicChatInputMessageContent
                     {
@@ -282,27 +324,12 @@ public class OneBotEvent
         {
             return null;
         }
-        var choice = chatCompletion.Choices[0];
-        var obMsg = new OneBotMessage();
-        // 对原来消息的引用
-        obMsg.Items.Add(new OneBotMessageItem
+        var content = chatCompletion.Choices[0].Message.Content;
+        if (hostEnvironment.IsDevelopment())
         {
-            Type = OneBotMessageType.CQReply.ToCustomString(),
-            Data = new OneBotMessageItemData
-            {
-                Id = onebotEvent.MessageId.ToString()
-            }
-        });
-        // 回复的内容
-        obMsg.Items.Add(new OneBotMessageItem
-        {
-            Type = OneBotMessageType.Text.ToCustomString(),
-            Data = new OneBotMessageItemData
-            {
-                Text = choice.Message.Content,
-            }
-        });
-        return obMsg;
+            content = "{chatCompletion.Model}\n" + content;
+        }
+        return TextMsg(onebotEvent, content);
     }
 
     /// <summary>
@@ -315,8 +342,25 @@ public class OneBotEvent
         {
             return null;
         }
+        var messages = new List<string>();
+        // 回复的内容
+        if (hostEnvironment.IsDevelopment())
+        {
+            messages.Add($"{chatResponse.Model}\n");
+        }
+        messages.AddRange(chatResponse.Content.Where(r => r.Type == "text").Select(r => r.Text!));
+        return TextMsg(onebotEvent, messages.ToArray());
+    }
+
+    /// <summary>
+    /// 组装文本消息
+    /// </summary>
+    /// <param name="onebotEvent"></param>
+    /// <param name="messages"></param>
+    /// <returns></returns>
+    public OneBotMessage? TextMsg(OneBotEventMessage onebotEvent, params string[] messages)
+    {
         var obMsg = new OneBotMessage();
-        // 对原来消息的引用
         obMsg.Items.Add(new OneBotMessageItem
         {
             Type = OneBotMessageType.CQReply.ToCustomString(),
@@ -325,32 +369,17 @@ public class OneBotEvent
                 Id = onebotEvent.MessageId.ToString()
             }
         });
-        // 回复的内容
-        foreach(var item in chatResponse.Content.Where(r => r.Type == "text")) 
+        foreach (var msg in messages)
         {
             obMsg.Items.Add(new OneBotMessageItem
             {
                 Type = OneBotMessageType.Text.ToCustomString(),
                 Data = new OneBotMessageItemData
                 {
-                    Text = item.Text,
+                    Text = msg
                 }
             });
         }
-        return obMsg;
-    }
-
-    public OneBotMessage? BusyMsg()
-    {
-        var obMsg = new OneBotMessage();
-        obMsg.Items.Add(new OneBotMessageItem
-        {
-            Type = OneBotMessageType.Text.ToCustomString(),
-            Data = new OneBotMessageItemData
-            {
-                Text = "处理中，请勿重复调用"
-            }
-        });
         return obMsg;
     }
 }

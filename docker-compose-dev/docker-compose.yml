@@ -26,7 +26,7 @@ services:
         image: redis:alpine
         restart: always
         volumes:
-            - redis-data:/data
+            - redis-data-dev:/data
         healthcheck:
             test: ["CMD", "redis-cli", "ping"]
             interval: 30s
@@ -46,10 +46,9 @@ services:
         restart: always
         image: mlikiowa/napcat-docker:latest
         volumes:
-            - napcat:/app/.config/QQ
-            - napcat:/app/napcat/config
+            - napcat-dev:/app/.config/QQ
+            - napcat-dev:/app/napcat/config
 
 volumes:
-    redis-data:
-    napcat:
-    notify:
+    redis-data-dev:
+    napcat-dev:

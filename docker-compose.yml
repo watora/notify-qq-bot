@@ -14,6 +14,7 @@ services:
             - YOUTUBE_KEY=${YOUTUBE_KEY}
             - OPENAI_TOKEN=${OPENAI_TOKEN}
             - OPENAI_ENDPOINT=${OPENAI_ENDPOINT}
+            - ONEBOT_EVENT_SECRET=${ONEBOT_EVENT_SECRET}
         depends_on:
             - rsshub
             - napcat
@@ -39,6 +40,7 @@ services:
             CACHE_TYPE: redis
             REDIS_URL: "redis://redis:6379/"
             YOUTUBE_KEY: ${YOUTUBE_KEY}
+            #BILIBILI_COOKIE_*
         healthcheck:
             test: ["CMD", "curl", "-f", "http://localhost:1200/healthz"]
             interval: 30s

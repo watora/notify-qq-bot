@@ -9,11 +9,13 @@ namespace Notify.Service.Hubs;
 public class PrivateHub : Hub
 {
     private ChatBotOpenAI chatBotOpenAI;
+    private ChatBotAnthropic chatBotAnthropic;
     private ILogger<PrivateHub> logger;
 
-    public PrivateHub(ChatBotOpenAI chatBotOpenAI, ILogger<PrivateHub> logger)
+    public PrivateHub(ChatBotOpenAI chatBotOpenAI, ChatBotAnthropic chatBotAnthropic, ILogger<PrivateHub> logger)
     {
         this.chatBotOpenAI = chatBotOpenAI;
+        this.chatBotAnthropic = chatBotAnthropic;
         this.logger = logger;
     }
 
@@ -24,6 +26,29 @@ public class PrivateHub : Hub
         {
             logger.LogInformation("private hub unauthorized");
             await Clients.Caller.SendAsync("ReplyFromBot", "unauthorized");
+        }
+        else if (model.StartsWith("claude")) 
+        {
+            var input = new AnthropicChatInput { Model = model, Messages = new List<AnthropicChatInputMessage>(), MaxTokens = 2048 };
+            input.Messages.Add(new AnthropicChatInputMessage { Role = "user", Content = new List<AnthropicChatInputMessageContent>() });
+            input.Messages[0].Content.Add(new AnthropicChatInputMessageContent { Type = "text", Text = message });
+            try
+            {
+                var chatResponse = await chatBotAnthropic.Chat(identity.Name, input);
+                if (chatResponse != null)
+                {
+                    foreach (var content in chatResponse.Content.Where(r => r.Type == "text")) 
+                    {
+                        await Clients.Caller.SendAsync("ReplyFromBot", content.Text);
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                logger.LogError(e, "private hub unexpected expection");
+                await Clients.Caller.SendAsync("ReplyFromBot", "meet unexpected expection");
+            }
+
         }
         else
         {
