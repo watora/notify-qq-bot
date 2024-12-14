@@ -67,6 +67,10 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
     };
 });
 builder.Services.AddSerilog((sp, opt) => opt.ReadFrom.Configuration(builder.Configuration));
+if (!builder.Environment.IsDevelopment()) 
+{
+    builder.WebHost.UseStaticWebAssets();
+}
 
 var app = builder.Build();
 
