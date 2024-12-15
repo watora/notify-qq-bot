@@ -41,6 +41,7 @@ services:
             CACHE_TYPE: redis
             REDIS_URL: "redis://redis:6379/"
             YOUTUBE_KEY: ${YOUTUBE_KEY}
+            CACHE_CONTENT_EXPIRE: 600
             #BILIBILI_COOKIE_*
         healthcheck:
             test: ["CMD", "curl", "-f", "http://localhost:1200/healthz"]

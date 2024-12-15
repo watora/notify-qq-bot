@@ -4,7 +4,7 @@ namespace Notify.Utils;
 
 public static class ImageHelper 
 {   
-   public static string GetMediaType(Span<byte> bytes) 
+   public static string GetMediaType(ReadOnlySpan<byte> bytes) 
     {
         var image = Image.Load(bytes);
         var format = image.Metadata.DecodedImageFormat;

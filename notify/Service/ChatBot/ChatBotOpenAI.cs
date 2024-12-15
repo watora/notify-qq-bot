@@ -62,11 +62,11 @@ public class ChatBotOpenAI : ChatBotBase
                     Role = msg.Role,
                     Content = new List<OpenAIChatInputMessageContent> { new OpenAIChatInputMessageContent { Type = "text", Text = msg.Content } }
                 });
-                // 当存储条数>100时，丢弃前50条
-                if (messages.Count > 100)
+                // 当存储条数>50时，丢弃前20条
+                if (messages.Count > 50)
                 {
                     logger.LogInformation($"[{key}]chat history exceed limit, drop");
-                    messages.RemoveRange(0, 50);
+                    messages.RemoveRange(0, 20);
                 }
             }
         }
@@ -87,7 +87,7 @@ public class ChatBotOpenAI : ChatBotBase
         return await Extension.Lock(uniqueKey, async () =>
         {
             FillHistoryChat(uniqueKey, input);
-            var resp = await httpClient.PostAsJsonAsync("v1/chat/completions", input, new JsonSerializerOptions { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping });
+            var resp = await httpClient.PostAsJsonAsync("v1/chat/completions", input);
             var respStr = await resp.Content.ReadAsStringAsync();
             logger.LogInformation($"call chat completion, resp:{respStr}");
             if (!resp.IsSuccessStatusCode)

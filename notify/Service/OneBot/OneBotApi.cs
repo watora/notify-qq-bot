@@ -56,16 +56,37 @@ public class OneBotApi
     /// 根据消息id获取消息内容
     /// </summary>
     /// <returns></returns>
-    public async Task<OneBotEventMessage?> GetMessageById(string messageId) 
+    public async Task<OneBotEventMessage?> GetMessageById(string messageId)
     {
         var resp = await httpClient.GetAsync($"{this.oneBotUrl}/get_msg?message_id={messageId}");
-        if (resp.IsSuccessStatusCode) 
+        if (resp.IsSuccessStatusCode)
         {
             var content = await resp.Content.ReadAsStringAsync();
             var respObj = JsonSerializer.Deserialize<OneBotResp<OneBotEventMessage>>(content);
-            if (respObj == null || respObj.RetCode != 0) 
+            if (respObj == null || respObj.RetCode != 0)
             {
-                logger.LogWarning($"get message error, content: {content}");
+                logger.LogWarning($"get message error, code:{respObj?.RetCode}");
+                return null;
+            }
+            return respObj.Data;
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// 获取图片二进制
+    /// </summary>
+    /// <returns></returns>
+    public async Task<OneBotImageData?> GetImage(string file)
+    {
+        var resp = await httpClient.GetAsync($"{this.oneBotUrl}/get_image?file={file}");
+        if (resp.IsSuccessStatusCode)
+        {
+            var content = await resp.Content.ReadAsStringAsync();
+            var respObj = JsonSerializer.Deserialize<OneBotResp<OneBotImageData>>(content);
+            if (respObj == null || respObj.RetCode != 0)
+            {
+                logger.LogWarning($"get get_image error, code:{respObj?.RetCode}");
                 return null;
             }
             return respObj.Data;

@@ -69,4 +69,8 @@ public class OneBotMessageItemData
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? QQ { get; set; }
 
+    [JsonPropertyName("file")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? File { get; set; }
+
 }

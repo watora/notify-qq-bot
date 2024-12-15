@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 using Notify.Domain.Config;
 using Notify.Domain.Models;
@@ -187,7 +188,7 @@ public class OneBotEvent
         var input = new OpenAIChatInput
         {
             Model = chatConfig.Model!,
-            Messages = new List<OpenAIChatInputMessage>() { ConvertToOpenAIChatInputMessage(onebotEvent) },
+            Messages = new List<OpenAIChatInputMessage>() { await ConvertToOpenAIChatInputMessage(onebotEvent) },
         };
         try
         {
@@ -196,12 +197,15 @@ public class OneBotEvent
             {
                 return ConvertOpenAIChatCompletionToOneBotMessage(onebotEvent, completion);
             }
+            else
+            {
+                return TextMsg(onebotEvent, "处理异常，请检查日志");
+            }
         }
         catch (LockTimeoutException)
         {
             return TextMsg(onebotEvent, "处理中，请勿重复提交");
         }
-        return null;
     }
 
     /// <summary>
@@ -222,12 +226,15 @@ public class OneBotEvent
             {
                 return ConvertOpenAIChatCompletionToOneBotMessage(onebotEvent, chatResponse);
             }
+            else
+            {
+                return TextMsg(onebotEvent, "处理异常，请检查日志");
+            }
         }
         catch (LockTimeoutException)
         {
             return TextMsg(onebotEvent, "处理中，请勿重复提交");
         }
-        return null;
     }
 
 
@@ -255,8 +262,12 @@ public class OneBotEvent
             }
             else if (item.Type == OneBotMessageType.CQImage.ToCustomString())
             {
-                var bytes = await httpClient.GetByteArrayAsync(item.Data.Url!);
-                var mediaType = ImageHelper.GetMediaType(bytes);
+                var file = await oneBotApi.GetImage(item.Data.File!);
+                if (file == null)
+                {
+                    continue;
+                }
+                var mediaType = ImageHelper.GetMediaType(Convert.FromBase64String(file.Base64));
                 if (!string.IsNullOrEmpty(mediaType))
                 {
                     newMsg.Content.Add(new AnthropicChatInputMessageContent
@@ -266,7 +277,7 @@ public class OneBotEvent
                         {
                             Type = "base64",
                             MediaType = mediaType,
-                            Data = Convert.ToBase64String(bytes)
+                            Data = file.Base64
                         }
                     });
                 }
@@ -280,7 +291,7 @@ public class OneBotEvent
     /// </summary>
     /// <param name="onebotEvent"></param>
     /// <returns></returns>
-    private OpenAIChatInputMessage ConvertToOpenAIChatInputMessage(OneBotEventMessage onebotEvent)
+    private async Task<OpenAIChatInputMessage> ConvertToOpenAIChatInputMessage(OneBotEventMessage onebotEvent)
     {
         var newMsg = new OpenAIChatInputMessage
         {
@@ -300,14 +311,23 @@ public class OneBotEvent
             }
             else if (item.Type == OneBotMessageType.CQImage.ToCustomString())
             {
-                newMsg.Content.Add(new OpenAIChatInputMessageContent
+                var file = await oneBotApi.GetImage(item.Data.File!);
+                if (file == null)
                 {
-                    Type = "image_url",
-                    ImageUrl = new OpenAIChatInputContentImage
+                    continue;
+                }
+                var mediaType = ImageHelper.GetMediaType(Convert.FromBase64String(file.Base64));
+                if (!string.IsNullOrEmpty(mediaType))
+                {
+                    newMsg.Content.Add(new OpenAIChatInputMessageContent
                     {
-                        Url = item.Data.Url!
-                    }
-                });
+                        Type = "image_url",
+                        ImageUrl = new OpenAIChatInputContentImage
+                        {
+                            Url = $"data:{mediaType};base64,{file.Base64}"
+                        }
+                    });
+                }
             }
         }
         return newMsg;
@@ -324,11 +344,7 @@ public class OneBotEvent
         {
             return null;
         }
-        var content = chatCompletion.Choices[0].Message.Content;
-        if (hostEnvironment.IsDevelopment())
-        {
-            content = "{chatCompletion.Model}\n" + content;
-        }
+        var content = $"{chatCompletion.Model}\n" + chatCompletion.Choices[0].Message.Content;
         return TextMsg(onebotEvent, content);
     }
 
@@ -342,12 +358,10 @@ public class OneBotEvent
         {
             return null;
         }
-        var messages = new List<string>();
-        // 回复的内容
-        if (hostEnvironment.IsDevelopment())
+        var messages = new List<string>
         {
-            messages.Add($"{chatResponse.Model}\n");
-        }
+            $"{chatResponse.Model}\n"
+        };
         messages.AddRange(chatResponse.Content.Where(r => r.Type == "text").Select(r => r.Text!));
         return TextMsg(onebotEvent, messages.ToArray());
     }
