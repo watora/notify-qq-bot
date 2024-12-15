@@ -38,14 +38,15 @@ public class RSSNotifyYoutube : RSSNotifyBase
                 }
                 foreach (var record in group) 
                 {
+                    var lastCheckTime = record.LastCheckTime;
+                    record.ExpCheckTime = now + record.CheckInterval;
+                    record.LastCheckTime = now;
                     var latest = channel.Items[0];
                     var date = DateTime.Parse(latest.PubDate);
-                    if (new DateTimeOffset(date).ToUnixTimeSeconds() <= record.LastCheckTime)
+                    if (new DateTimeOffset(date).ToUnixTimeSeconds() <= lastCheckTime)
                     {
                         continue;
                     }
-                    record.ExpCheckTime = now + record.CheckInterval;
-                    record.LastCheckTime = now;
                     var message = BuildLiveOneBotMessage(channel);
                     if (message == null)
                     {

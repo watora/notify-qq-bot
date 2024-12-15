@@ -37,15 +37,16 @@ public class RSSNotifyCopymanga : RSSNotifyBase
                 }
                 foreach (var record in group) 
                 {
+                    var lastCheckTime = record.LastCheckTime;
+                    record.ExpCheckTime = now + record.CheckInterval;
+                    record.LastCheckTime = now;
                     // 只发最新的
                     var latest = channel.Items[0];
                     var date = DateTime.Parse(latest.PubDate);
-                    if (new DateTimeOffset(date).ToUnixTimeSeconds() <= record.LastCheckTime)
+                    if (new DateTimeOffset(date).ToUnixTimeSeconds() <= lastCheckTime)
                     {
                         continue;
                     }
-                    record.ExpCheckTime = now + record.CheckInterval;
-                    record.LastCheckTime = now;
                     var message = BuildCopymangaUpdateBotMessage(channel);
                     if (message == null)
                     {
