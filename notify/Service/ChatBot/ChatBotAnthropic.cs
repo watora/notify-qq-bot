@@ -95,13 +95,12 @@ public class ChatBotAnthropic : ChatBotBase
         return await Extension.Lock(uniqueKey, async () =>
         {
             FillHistoryChat(uniqueKey, input);
-            logger.LogDebug($"call chat, req:{JsonSerializer.Serialize(input)}");
-            var resp = await httpClient.PostAsJsonAsync("v1/messages", input);
+            var resp = await httpClient.PostAsJsonAsync("v1/messages", input, new JsonSerializerOptions { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping });
             var respStr = await resp.Content.ReadAsStringAsync();
-            logger.LogDebug($"call chat, resp:{respStr}");
+            logger.LogInformation($"call chat, resp:{respStr}");
             if (!resp.IsSuccessStatusCode)
             {
-                logger.LogInformation($"call anthropic chat failed, code:{resp.StatusCode}");
+                logger.LogWarning($"call anthropic chat failed, code:{resp.StatusCode}");
                 return null;
             }
             var chatResponse = JsonSerializer.Deserialize<AnthropicChatResponse>(respStr);

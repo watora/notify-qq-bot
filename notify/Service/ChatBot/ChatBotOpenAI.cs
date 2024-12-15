@@ -30,7 +30,7 @@ public class ChatBotOpenAI : ChatBotBase
     /// <param name="input"></param>
     private void FillHistoryChat(string uniqueKey, OpenAIChatInput input)
     {
-        var key =  $"{input.Model}_{uniqueKey}";
+        var key = $"{input.Model}_{uniqueKey}";
         var messages = memoryCache.Get<List<OpenAIChatInputMessage>>(key);
         if (messages != null)
         {
@@ -87,13 +87,12 @@ public class ChatBotOpenAI : ChatBotBase
         return await Extension.Lock(uniqueKey, async () =>
         {
             FillHistoryChat(uniqueKey, input);
-            logger.LogDebug($"call chat completion, req:{JsonSerializer.Serialize(input)}");
-            var resp = await httpClient.PostAsJsonAsync("v1/chat/completions", input);
+            var resp = await httpClient.PostAsJsonAsync("v1/chat/completions", input, new JsonSerializerOptions { Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping });
             var respStr = await resp.Content.ReadAsStringAsync();
-            logger.LogDebug($"call chat completion, resp:{respStr}");
+            logger.LogInformation($"call chat completion, resp:{respStr}");
             if (!resp.IsSuccessStatusCode)
             {
-                logger.LogInformation($"call openai chat completions failed, code:{resp.StatusCode}");
+                logger.LogWarning($"call openai chat completions failed, code:{resp.StatusCode}");
                 return null;
             }
             var chatCompletion = JsonSerializer.Deserialize<OpenAIChatCompletion>(respStr);
