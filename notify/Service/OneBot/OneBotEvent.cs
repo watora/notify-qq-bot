@@ -267,8 +267,7 @@ public class OneBotEvent
                 {
                     continue;
                 }
-                var mediaType = ImageHelper.GetMediaType(Convert.FromBase64String(file.Base64));
-                if (!string.IsNullOrEmpty(mediaType))
+                if (!string.IsNullOrEmpty(file.MimeType))
                 {
                     newMsg.Content.Add(new AnthropicChatInputMessageContent
                     {
@@ -276,8 +275,8 @@ public class OneBotEvent
                         Source = new AnthropicChatInputContentSource
                         {
                             Type = "base64",
-                            MediaType = mediaType,
-                            Data = file.Base64
+                            MediaType = file.MimeType,
+                            Data = file.Base64!
                         }
                     });
                 }
@@ -316,15 +315,14 @@ public class OneBotEvent
                 {
                     continue;
                 }
-                var mediaType = ImageHelper.GetMediaType(Convert.FromBase64String(file.Base64));
-                if (!string.IsNullOrEmpty(mediaType))
+                if (!string.IsNullOrEmpty(file.MimeType))
                 {
                     newMsg.Content.Add(new OpenAIChatInputMessageContent
                     {
                         Type = "image_url",
                         ImageUrl = new OpenAIChatInputContentImage
                         {
-                            Url = $"data:{mediaType};base64,{file.Base64}"
+                            Url = $"data:{file.MimeType};base64,{file.Base64}"
                         }
                     });
                 }

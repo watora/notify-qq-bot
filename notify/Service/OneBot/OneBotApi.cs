@@ -1,8 +1,10 @@
 using System.Text.Json;
-using Microsoft.AspNetCore.OutputCaching;
+using System.Web;
 using Notify.Domain.Config;
 using Notify.Domain.Models;
 using Notify.Domain.Utils;
+using Notify.Utils;
+using SixLabors.ImageSharp;
 
 namespace Notify.Service.OneBot;
 
@@ -74,21 +76,26 @@ public class OneBotApi
     }
 
     /// <summary>
-    /// 获取图片二进制
+    /// 获取图片
     /// </summary>
     /// <returns></returns>
     public async Task<OneBotImageData?> GetImage(string file)
     {
-        var resp = await httpClient.GetAsync($"{this.oneBotUrl}/get_image?file={file}");
+        var resp = await httpClient.GetAsync($"{this.oneBotUrl}/get_image?file={HttpUtility.UrlEncode(file)}");
         if (resp.IsSuccessStatusCode)
         {
             var content = await resp.Content.ReadAsStringAsync();
             var respObj = JsonSerializer.Deserialize<OneBotResp<OneBotImageData>>(content);
-            if (respObj == null || respObj.RetCode != 0)
+            if (respObj == null || respObj.RetCode != 0 || respObj.Data == null)
             {
-                logger.LogWarning($"get get_image error, code:{respObj?.RetCode}");
+                logger.LogWarning($"get image error, code:{respObj?.RetCode}");
                 return null;
             }
+            var image = await Image.LoadAsync(respObj.Data.File.Replace("/app/.config/QQ", "./napcat"));
+            using var stream = new MemoryStream();
+            image.SaveAsJpeg(stream);
+            respObj.Data.Base64 = Convert.ToBase64String(stream.ToArray().AsSpan());
+            respObj.Data.MimeType = "image/jpeg";
             return respObj.Data;
         }
         return null;

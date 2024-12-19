@@ -23,6 +23,7 @@ services:
             - notify:/app/logs
             - notify:/app/persist-keys
             - notify:/app/data
+            - napcat:/app/napcat
         healthcheck:    
             test: ["CMD", "curl", "-f", "http://localhost:80/api/manage/health"]
             interval: 30s
