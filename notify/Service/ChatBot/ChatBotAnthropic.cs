@@ -10,9 +10,11 @@ public class ChatBotAnthropic : ChatBotBase
 {
     private string endpoint;
     private string token;
+    private HttpClient httpClient;
 
     public ChatBotAnthropic(IServiceProvider sp, ILogger<ChatBotAnthropic> logger) : base(sp, logger)
     {
+        httpClient = sp.GetRequiredService<IHttpClientFactory>().CreateClient();
         endpoint = chatBotOption.Value.AnthropicEndpoint!;
         token = chatBotOption.Value.AnthropicToken!;
         httpClient.DefaultRequestHeaders.Add("x-api-key", token);
