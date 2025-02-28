@@ -71,6 +71,7 @@ services:
             - NAPCAT_GID=${NAPCAT_GID}
         ports:
             - 6099:6099
+            - 3000:3000
         privileged: true
         container_name: napcat
         restart: always

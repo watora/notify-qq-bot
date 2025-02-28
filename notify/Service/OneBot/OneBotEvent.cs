@@ -206,6 +206,10 @@ public class OneBotEvent
         {
             return TextMsg(onebotEvent, "处理中，请勿重复提交");
         }
+        catch 
+        {
+            return TextMsg(onebotEvent, "处理异常，请检查日志");
+        } 
     }
 
     /// <summary>
@@ -235,8 +239,11 @@ public class OneBotEvent
         {
             return TextMsg(onebotEvent, "处理中，请勿重复提交");
         }
+        catch 
+        {
+            return TextMsg(onebotEvent, "处理异常，请检查日志");
+        }
     }
-
 
     /// <summary>
     /// 转换onebot事件到anthropic的输入

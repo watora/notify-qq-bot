@@ -10,9 +10,11 @@ public class ChatBotOpenAI : ChatBotBase
 {
     private string endpoint;
     private string token;
+    private HttpClient httpClient;
 
     public ChatBotOpenAI(IServiceProvider sp, ILogger<ChatBotOpenAI> logger) : base(sp, logger)
     {
+        httpClient = sp.GetRequiredService<IHttpClientFactory>().CreateClient();
         endpoint = chatBotOption.Value.OpenAIEndpoint!;
         token = chatBotOption.Value.OpenAIToken!;
         httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token);
