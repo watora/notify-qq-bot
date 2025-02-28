@@ -1,9 +1,9 @@
+using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Web;
 using Notify.Domain.Config;
 using Notify.Domain.Models;
 using Notify.Domain.Utils;
-using Notify.Utils;
 using SixLabors.ImageSharp;
 
 namespace Notify.Service.OneBot;
@@ -18,6 +18,8 @@ public class OneBotApi
     {
         httpClient = httpClientFactory.CreateClient();
         oneBotUrl = configuration["OneBot:Url"] ?? "";
+        var reqToken = configuration["ONEBOT_REQ_SECRET"] ?? "";
+        httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", reqToken);
         this.logger = logger;
     }
 
@@ -29,10 +31,10 @@ public class OneBotApi
     /// <param name="messageType">消息类型</param>
     /// <param name="message"></param>
     /// <returns></returns>
-    public async Task<bool> SendMessage(string Id, string messageType, OneBotMessage message)
+    public async Task<bool> SendMessage(string id, string messageType, OneBotMessage message)
     {
-        var groupId = messageType == Consts.MsgTargetTypeGroup ? Id : "";
-        var userId = messageType == Consts.MsgTargetTypePrivate ? Id : "";
+        var groupId = messageType == Consts.MsgTargetTypeGroup ? id : "";
+        var userId = messageType == Consts.MsgTargetTypePrivate ? id : "";
         var req = new
         {
             message_type = messageType,
