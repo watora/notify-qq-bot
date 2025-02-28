@@ -34,12 +34,12 @@ public class RSSHostService : IHostedService
         {
             var sw = new Stopwatch();
             sw.Start();
-            logger.LogInformation("rss notify loop start");
+            logger.LogDebug("rss notify loop start");
             await handleBilibili(serviceProvider);
             await handleYoutube(serviceProvider);
             await handleCopymanga(serviceProvider);
             sw.Stop();
-            logger.LogInformation($"rss notify loop end, used:{sw.ElapsedMilliseconds}ms");
+            logger.LogDebug($"rss notify loop end, used:{sw.ElapsedMilliseconds}ms");
             firstCheck = false;
         }
         catch (Exception ex)

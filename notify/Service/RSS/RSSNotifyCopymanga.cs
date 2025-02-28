@@ -43,6 +43,7 @@ public class RSSNotifyCopymanga : RSSNotifyBase
                     // 只发最新的
                     var latest = channel.Items[0];
                     var date = DateTime.Parse(latest.PubDate);
+                    logger.LogInformation($"copymanga info: {JsonSerializer.Serialize(latest)}");
                     if (new DateTimeOffset(date).ToUnixTimeSeconds() <= lastCheckTime)
                     {
                         continue;

@@ -114,12 +114,12 @@
 
     private void AddNew()
     {
-        navigationManager.NavigateTo("rss/config-edit", false);
+        navigationManager.NavigateTo("/rss/config-edit", false);
     }
 
     private void Edit(RSSConfigDO row)
     {
-        navigationManager.NavigateTo($"rss/config-edit/{row.Id}", false);
+        navigationManager.NavigateTo($"/rss/config-edit/{row.Id}", false);
     }
 
     private async Task SetStatus(long id, bool active)
