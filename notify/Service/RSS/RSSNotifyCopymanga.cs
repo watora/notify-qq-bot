@@ -43,7 +43,6 @@ public class RSSNotifyCopymanga : RSSNotifyBase
                     // 只发最新的
                     var latest = channel.Items[0];
                     var date = DateTime.Parse(latest.PubDate);
-                    logger.LogInformation($"copymanga info: {JsonSerializer.Serialize(latest)}");
                     if (new DateTimeOffset(date).ToUnixTimeSeconds() <= lastCheckTime)
                     {
                         continue;
@@ -56,7 +55,7 @@ public class RSSNotifyCopymanga : RSSNotifyBase
                     logger.LogInformation($"send copymanga update, name:{record.SubscribeId}, message:{JsonSerializer.Serialize(message)}");
                     if (sendMsg)
                     {
-                        var success = await this.oneBotApi.SendMessage(record.MsgTargetId, record.MsgTargetType, message);
+                        var success = await oneBotApi.SendMessage(record.MsgTargetId, record.MsgTargetType, message);
                         if (success)
                         {
                             record.LastMsgSendTime = now;

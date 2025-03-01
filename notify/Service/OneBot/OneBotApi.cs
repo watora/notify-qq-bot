@@ -51,7 +51,7 @@ public class OneBotApi
         }
         else
         {
-            logger.LogWarning($"send_msg failed, code:{resp.StatusCode}");
+            logger.LogWarning($"send msg failed, code:{resp.StatusCode}");
         }
         return false;
     }

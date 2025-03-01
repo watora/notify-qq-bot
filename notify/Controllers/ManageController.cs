@@ -8,6 +8,7 @@ using Notify.Domain.Models;
 using Notify.Domain.Models.Request;
 using Notify.Domain.Models.Response;
 using Notify.Repository.Entity;
+using Notify.Domain.Utils;
 
 namespace notify.Controllers;
 
@@ -230,4 +231,18 @@ public class ManageController : ControllerBase
         }
     }
     #endregion
+
+    [HttpGet("test-one-bot")]
+    public async Task<ActionResult<bool>> MsgTest() 
+    {
+        var msg = new OneBotMessage();
+        msg.Items.Add(new OneBotMessageItem{
+            Type = OneBotMessageType.Text.ToCustomString(),
+            Data = new OneBotMessageItemData {
+                Text = "测试接口"
+            }
+        });
+        
+        return await oneBotApi.SendMessage("153624354", Consts.MsgTargetTypeGroup, msg);
+    }
 }
