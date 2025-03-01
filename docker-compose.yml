@@ -14,6 +14,7 @@ services:
             - OPENAI_TOKEN=${OPENAI_TOKEN}
             - OPENAI_ENDPOINT=${OPENAI_ENDPOINT}
             - ONEBOT_EVENT_SECRET=${ONEBOT_EVENT_SECRET}
+            - ONEBOT_REQ_SECRET=${ONEBOT_REQ_SECRET}
             - ANTHROPIC_TOKEN=${ANTHROPIC_TOKEN}
             - ANTHROPIC_ENDPOINT=${ANTHROPIC_ENDPOINT}
         depends_on:
@@ -25,7 +26,7 @@ services:
             - notify:/app/data
             - napcat:/app/napcat
         healthcheck:    
-            test: ["CMD", "curl", "-f", "http://localhost:80/api/manage/health"]
+            test: ["CMD", "curl", "-f", "http://localhost:8080/api/manage/health"]
             interval: 30s
             timeout: 10s
             retries: 3
