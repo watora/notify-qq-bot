@@ -20,6 +20,7 @@ public static class ProgramConfiguration
         builder.Services.AddOptions<OfficialBotOption>()
             .Bind(configuration.GetSection("OfficialBot"))
             .Configure(opt => opt.AppSecret = Environment.GetEnvironmentVariable("OFFICIALBOT_APP_SECRET") ?? "")
+            .Configure(opt => opt.SendSecret = Environment.GetEnvironmentVariable("OFFICIALBOT_SEND_SECRET") ?? "")
             .Validate(opt => !opt.Enabled || (!string.IsNullOrWhiteSpace(opt.AppId) && !string.IsNullOrWhiteSpace(opt.AppSecret)),
                 "OfficialBot:AppId and environment variable OFFICIALBOT_APP_SECRET are required when enabled.")
             .Validate(opt => !opt.Enabled || (Uri.TryCreate(opt.ApiEndpoint, UriKind.Absolute, out var api) && api.Scheme == "https"

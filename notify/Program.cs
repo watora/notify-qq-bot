@@ -67,6 +67,9 @@ builder.Services.Configure<ApiBehaviorOptions>(options =>
 {
     options.InvalidModelStateResponseFactory = actionContext =>
     {
+        if (actionContext.ActionDescriptor is Microsoft.AspNetCore.Mvc.Controllers.ControllerActionDescriptor action
+            && action.ControllerTypeInfo.AsType() == typeof(notify.Controllers.OfficialBotController))
+            return new BadRequestObjectResult(new { success = false, message = "Invalid request body." });
         return new ObjectResult(new CommonResponse(ErrorCodes.InvalidRequest));
     };
 });

@@ -1,4 +1,6 @@
 using System.Text;
+using System.Net.Http.Headers;
+using System.Security.Cryptography;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -26,6 +28,54 @@ public class OfficialBotController : ControllerBase
         this.signature = signature;
         this.queue = queue;
         this.logger = logger;
+    }
+
+    [HttpPost("sendmessage")]
+    [RequestSizeLimit(1024 * 1024)]
+    public async Task<IActionResult> SendMessage([FromBody] OfficialBotSendRequest request,
+        [FromServices] OfficialBotApi api, CancellationToken cancellationToken)
+    {
+        if (!options.Enabled || string.IsNullOrWhiteSpace(options.SendSecret))
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, new { success = false, message = "External sending is not enabled." });
+        if (!AuthenticationHeaderValue.TryParse(Request.Headers.Authorization.ToString(), out var authorization)
+            || !string.Equals(authorization.Scheme, "Bearer", StringComparison.OrdinalIgnoreCase)
+            || string.IsNullOrEmpty(authorization.Parameter)
+            || !CryptographicOperations.FixedTimeEquals(
+                SHA256.HashData(Encoding.UTF8.GetBytes(authorization.Parameter)),
+                SHA256.HashData(Encoding.UTF8.GetBytes(options.SendSecret))))
+        {
+            Response.Headers.WWWAuthenticate = "Bearer";
+            return Unauthorized(new { success = false, message = "Invalid sending credential." });
+        }
+
+        if (string.IsNullOrWhiteSpace(request.TargetId) || request.MessageType is not ("private" or "group")
+            || request.Message == null || request.Message.MsgType is not (0 or 2 or 7))
+            return BadRequest(new { success = false, message = "Provide target_id, message_type (private/group), and message (msg_type 0/2/7)." });
+
+        try
+        {
+            var mappings = request.MessageType == "private" ? options.PrivateTargetMappings : options.GroupTargetMappings;
+            var targetId = mappings.TryGetValue(request.TargetId, out var mapped) ? mapped : request.TargetId;
+            if (string.IsNullOrWhiteSpace(targetId))
+                return BadRequest(new { success = false, message = "The target mapping must contain a non-empty OpenID." });
+            var sent = await api.SendMessage(targetId, request.MessageType, request.Message, cancellationToken);
+            return sent ? Ok(new { success = true })
+                : StatusCode(StatusCodes.Status502BadGateway, new { success = false, message = "QQ rejected the message." });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { success = false, message = ex.Message });
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            logger.LogWarning("External official bot send timed out");
+            return StatusCode(StatusCodes.Status504GatewayTimeout, new { success = false, message = "QQ request timed out; delivery is uncertain." });
+        }
+        catch (Exception ex) when (ex is HttpRequestException or InvalidOperationException or JsonException)
+        {
+            logger.LogError(ex, "External official bot send failed");
+            return StatusCode(StatusCodes.Status502BadGateway, new { success = false, message = "QQ request failed." });
+        }
     }
 
     [HttpPost("event")]

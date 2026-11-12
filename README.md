@@ -90,6 +90,36 @@ await officialBotApi.SendPrivateMessage(userOpenId, new OfficialBotMessage
 
 回调入队后立即返回 `{"op":12,"d":0}`，后台服务独立创建 DI scope 处理聊天，避免模型响应时间阻塞 QQ 回调。重复消息按会话、消息 ID、消息序号及 `message_scene.ext` 的 `msg_idx` 去重；队列满时返回 HTTP 503，允许平台重投。当前队列和去重缓存仅在单进程内存中保存，进程退出会丢失待处理消息；ACK 后处理失败会记录日志，不保证平台再次投递。需要多实例或持久化交付时需替换为共享队列/去重存储。
 
+### 外部发送接口
+
+`POST /api/officialbot/sendmessage` 支持单聊和群消息。启用官方 Bot 后，在 notify 服务设置环境变量 `OFFICIALBOT_SEND_SECRET`，调用方通过 `Authorization: Bearer <密钥>` 传入同一值。此密钥与 QQ AppSecret 独立，未配置时接口返回 503。
+
+```http
+POST /api/officialbot/sendmessage
+Authorization: Bearer your-send-secret
+Content-Type: application/json
+
+{
+  "target_id": "群的group_openid",
+  "message_type": "group",
+  "message": { "content": "交易通知", "msg_type": 0 }
+}
+```
+
+单聊使用 `message_type: "private"`。`target_id` 同时支持原 QQ 号/群号与 OpenID：单聊先查 `OfficialBot:PrivateTargetMappings`，群聊先查 `OfficialBot:GroupTargetMappings`；命中时使用映射的 OpenID，未命中时将原值直接作为 OpenID 发送。映射只解析一次，映射值为空时返回 400。原 QQ 号/群号需要先配置映射，最终 OpenID 必须属于当前 AppID。`message` 使用官方消息结构，支持文本（0）、Markdown（2）和已有 `file_info` 的媒体（7）；被动回复可携带 `msg_id` / `event_id` 和 `msg_seq`。
+
+成功返回 HTTP 200 和 `{"success":true}`；参数错误返回 400，鉴权失败返回 401，未启用返回 503，QQ 拒绝或凭证请求失败返回 502，超时返回 504。失败响应含 `success:false` 和 `message`；超时时消息可能已送达，调用方不应无条件重发。
+
+`../trade` 通过该接口发送通知，部署时设置：
+
+```text
+OfficialBot__Endpoint=https://notify服务地址
+OfficialBot__GroupOpenId=通知群的group_openid
+OFFICIALBOT_SEND_SECRET=与notify相同的发送密钥
+```
+
+使用 trade 的 Docker Compose 时，分别通过 `.env` 中的 `OFFICIALBOT_ENDPOINT`、`OFFICIALBOT_GROUP_OPENID`、`OFFICIALBOT_SEND_SECRET` 注入。`GroupOpenId` 也可填写原群号，但需在 notify 的 `OfficialBot:GroupTargetMappings` 中配置对应映射。Endpoint 为 notify 基础地址，不是 QQ API 地址或完整 sendmessage 路径。开发环境沿用原先跳过通知发送的行为。群 OpenID 可从已验签事件日志的 `d.group_openid` 获取；主动通知仍受 QQ 平台权限和频控约束。
+
 ### 从 OneBot 迁移发送
 
 先启用官方 Bot 并配置 AppID 和环境变量 `OFFICIALBOT_APP_SECRET`。原有 QQ 号/群号不能直接作为官方 OpenID 使用，需选择以下方式之一：

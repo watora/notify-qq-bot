@@ -15,6 +15,10 @@ services:
             - OPENAI_ENDPOINT=${OPENAI_ENDPOINT}
             - ONEBOT_EVENT_SECRET=${ONEBOT_EVENT_SECRET}
             - ONEBOT_REQ_SECRET=${ONEBOT_REQ_SECRET}
+            - OfficialBot__Enabled=${OFFICIALBOT_ENABLED:-false}
+            - OfficialBot__AppId=${OFFICIALBOT_APP_ID}
+            - OFFICIALBOT_APP_SECRET=${OFFICIALBOT_APP_SECRET}
+            - OFFICIALBOT_SEND_SECRET=${OFFICIALBOT_SEND_SECRET}
             - ANTHROPIC_TOKEN=${ANTHROPIC_TOKEN}
             - ANTHROPIC_ENDPOINT=${ANTHROPIC_ENDPOINT}
         depends_on:
