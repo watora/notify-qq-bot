@@ -14,5 +14,6 @@ public static class Consts
 
 
     public const string ChatProviderOpenAI = "OpenAI";
+    public const string ChatProviderOpenAIResponses = "OpenAIResponses";
     public const string ChatProviderAnthropic = "Anthropic";
 }

@@ -58,7 +58,7 @@ public class RSSNotifyBilibili : RSSNotifyBase
                     foreach (var message in messages)
                     {
                         logger.LogInformation($"send bilibili new dynamic userId:{record.SubscribeId}, message:{JsonSerializer.Serialize(message)}");
-                        var success = await this.oneBotApi.SendMessage(record.MsgTargetId, record.MsgTargetType, message);
+                        var success = await this.officialBotSender.SendMessage(record.MsgTargetId, record.MsgTargetType, message);
                         if (success)
                         {
                             record.LastMsgSendTime = now;
@@ -112,7 +112,7 @@ public class RSSNotifyBilibili : RSSNotifyBase
                         continue;
                     }
                     logger.LogInformation($"send bilibili live info roomId:{record.SubscribeId}, message:{JsonSerializer.Serialize(message)}");
-                    var success = await this.oneBotApi.SendMessage(record.MsgTargetId, record.MsgTargetType, message);
+                    var success = await this.officialBotSender.SendMessage(record.MsgTargetId, record.MsgTargetType, message);
                     if (success)
                     {
                         record.LastMsgSendTime = now;

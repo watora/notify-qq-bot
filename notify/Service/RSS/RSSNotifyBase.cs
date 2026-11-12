@@ -1,5 +1,5 @@
 using Notify.Domain.Models;
-using Notify.Service.OneBot;
+using Notify.Service.OfficialBot;
 using System.Xml;
 using System.ServiceModel.Syndication;
 using HtmlAgilityPack;
@@ -10,7 +10,7 @@ namespace Notify.Service.RSS;
 
 public abstract class RSSNotifyBase
 {
-    protected OneBotApi oneBotApi;
+    protected OfficialBotSender officialBotSender;
     protected IConfiguration configuration;
     protected string hubUrl;
     protected IServiceProvider serviceProvider;
@@ -18,7 +18,7 @@ public abstract class RSSNotifyBase
 
     public RSSNotifyBase(IServiceProvider serviceProvider, ILogger logger)
     {
-        this.oneBotApi = serviceProvider.GetRequiredService<OneBotApi>();
+        this.officialBotSender = serviceProvider.GetRequiredService<OfficialBotSender>();
         this.configuration = serviceProvider.GetRequiredService<IConfiguration>();
         this.hubUrl = configuration["RSS:HubUrl"] ?? "";
         this.serviceProvider = serviceProvider;

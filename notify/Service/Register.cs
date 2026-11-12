@@ -1,6 +1,7 @@
 using Notify.Service.ChatBot;
 using Notify.Service.Manager;
 using Notify.Service.OneBot;
+using Notify.Service.OfficialBot;
 using Notify.Service.RSS;
 
 namespace Notify.Service;
@@ -10,10 +11,17 @@ public static class NotifyServiceRegister
     public static IServiceCollection AddNotifyServices(this IServiceCollection services)
     {
         services.AddSingleton<OneBotApi>();
+        services.AddSingleton<OfficialBotApi>();
+        services.AddSingleton<OfficialBotSender>();
+        services.AddSingleton<OfficialBotSignature>();
+        services.AddSingleton<OfficialBotEventQueue>();
+        services.AddScoped<OfficialBotEvent>();
+        services.AddHostedService<OfficialBotHostService>();
         services.AddSingleton<RSSNotifyBilibili>();
         services.AddSingleton<RSSNotifyYoutube>();
         services.AddSingleton<RSSNotifyCopymanga>();
         services.AddScoped<ChatBotOpenAI>();
+        services.AddScoped<ChatBotOpenAIResponses>();
         services.AddScoped<ChatBotAnthropic>();
         services.AddScoped<RSSManager>();
         services.AddScoped<ChatBotManager>();

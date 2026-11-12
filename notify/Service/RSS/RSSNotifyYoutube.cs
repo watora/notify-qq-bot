@@ -55,7 +55,7 @@ public class RSSNotifyYoutube : RSSNotifyBase
                     logger.LogInformation($"send youtube live info name:{record.SubscribeId}, message:{JsonSerializer.Serialize(message)}");
                     if (sendMsg)
                     {
-                        var success = await this.oneBotApi.SendMessage(record.MsgTargetId, record.MsgTargetType, message);
+                        var success = await this.officialBotSender.SendMessage(record.MsgTargetId, record.MsgTargetType, message);
                         if (success)
                         {
                             record.LastMsgSendTime = now;

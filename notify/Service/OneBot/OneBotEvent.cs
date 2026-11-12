@@ -5,6 +5,7 @@ using Notify.Domain.Models;
 using Notify.Domain.Utils;
 using Notify.Service.ChatBot;
 using Notify.Service.Manager;
+using Notify.Service.OfficialBot;
 using Notify.Utils;
 using SixLabors.ImageSharp;
 
@@ -12,20 +13,20 @@ namespace Notify.Service.OneBot;
 
 public class OneBotEvent
 {
-    private ChatBotOpenAI chatBotOpenAI;
-    private ChatBotAnthropic chatBotAnthropic;
+    private readonly IServiceProvider services;
     private ILogger<OneBotEvent> logger;
     private OneBotApi oneBotApi;
+    private OfficialBotSender officialBotSender;
     private ChatBotManager chatBotManager;
     private IHostEnvironment hostEnvironment;
     private HttpClient httpClient;
 
     public OneBotEvent(IServiceProvider provider, ILogger<OneBotEvent> logger, IHostEnvironment hostEnvironment)
     {
-        chatBotOpenAI = provider.GetRequiredService<ChatBotOpenAI>();
-        chatBotAnthropic = provider.GetRequiredService<ChatBotAnthropic>();
+        services = provider;
         this.logger = logger;
         oneBotApi = provider.GetRequiredService<OneBotApi>();
+        officialBotSender = provider.GetRequiredService<OfficialBotSender>();
         chatBotManager = provider.GetRequiredService<ChatBotManager>();
         this.hostEnvironment = hostEnvironment;
         httpClient = provider.GetRequiredService<HttpClient>();
@@ -145,6 +146,10 @@ public class OneBotEvent
     /// <returns></returns>
     private async Task HandleMessageEvent(OneBotEventMessage onebotEvent)
     {
+        var targetId = onebotEvent.MessageType == Consts.MsgTargetTypeGroup ? onebotEvent.GroupId : onebotEvent.UserId;
+        var openId = officialBotSender.GetMappedTarget(targetId.ToString(), onebotEvent.MessageType);
+        if (openId == null)
+            return;
         var chatConfig = await GetChatConfig(onebotEvent);
         if (chatConfig == null)
         {
@@ -166,17 +171,15 @@ public class OneBotEvent
             {
                 msg = await HandleAnthropicChatMessage(onebotEvent, chatConfig);
             }
+            else if (chatConfig.Provider == Consts.ChatProviderOpenAIResponses)
+            {
+                msg = await HandleResponsesChatMessage(onebotEvent, chatConfig);
+            }
         }
         if (msg != null)
         {
-            if (onebotEvent.MessageType == Consts.MsgTargetTypeGroup)
-            {
-                await oneBotApi.SendMessage(onebotEvent.GroupId.ToString(), Consts.MsgTargetTypeGroup, msg);
-            }
-            else
-            {
-                await oneBotApi.SendMessage(onebotEvent.UserId.ToString(), Consts.MsgTargetTypePrivate, msg);
-            }
+            if (!await officialBotSender.SendMessage(openId, onebotEvent.MessageType, msg))
+                logger.LogWarning("Official bot could not send reply for OneBot message {MessageId}", onebotEvent.MessageId);
         }
     }
 
@@ -192,7 +195,7 @@ public class OneBotEvent
         };
         try
         {
-            var completion = await chatBotOpenAI.ChatCompletion($"{chatConfig.TargetType}_{chatConfig.TargetId}", input);
+            var completion = await services.GetRequiredService<ChatBotOpenAI>().ChatCompletion($"{chatConfig.TargetType}_{chatConfig.TargetId}", input);
             if (completion != null)
             {
                 return ConvertOpenAIChatCompletionToOneBotMessage(onebotEvent, completion);
@@ -225,7 +228,7 @@ public class OneBotEvent
         };
         try
         {
-            var chatResponse = await chatBotAnthropic.Chat($"{chatConfig.TargetType}_{chatConfig.TargetId}", input);
+            var chatResponse = await services.GetRequiredService<ChatBotAnthropic>().Chat($"{chatConfig.TargetType}_{chatConfig.TargetId}", input);
             if (chatResponse != null)
             {
                 return ConvertOpenAIChatCompletionToOneBotMessage(onebotEvent, chatResponse);
@@ -241,6 +244,37 @@ public class OneBotEvent
         }
         catch 
         {
+            return TextMsg(onebotEvent, "处理异常，请检查日志");
+        }
+    }
+
+    private async Task<OneBotMessage?> HandleResponsesChatMessage(OneBotEventMessage onebotEvent, ChatConfigDO chatConfig)
+    {
+        try
+        {
+            var message = await ConvertToOpenAIChatInputMessage(onebotEvent);
+            var input = new OpenAIResponseInput
+            {
+                Model = chatConfig.Model!,
+                Input = new() { new()
+                {
+                    Role = "user",
+                    Content = message.Content.Select(part => part.Type == "image_url"
+                        ? new OpenAIResponseInputContent { Type = "input_image", ImageUrl = part.ImageUrl!.Url, Detail = "auto" }
+                        : new OpenAIResponseInputContent { Type = "input_text", Text = part.Text }).ToList()
+                } }
+            };
+            var result = await services.GetRequiredService<ChatBotOpenAIResponses>()
+                .Chat($"onebot_{chatConfig.TargetType}_{chatConfig.TargetId}", input);
+            return TextMsg(onebotEvent, result != null ? $"{result.Model ?? chatConfig.Model}\n{result.GetReplyText()}" : "处理异常，请检查日志");
+        }
+        catch (LockTimeoutException)
+        {
+            return TextMsg(onebotEvent, "处理中，请勿重复提交");
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "OneBot Responses API chat failed");
             return TextMsg(onebotEvent, "处理异常，请检查日志");
         }
     }

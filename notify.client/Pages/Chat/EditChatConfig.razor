@@ -14,20 +14,28 @@
         <SimpleSelect DefaultValue="@config.Provider" OnSelectedItemChanged="providerSelected">
             <SelectOptions>
                 <SimpleSelectOption Value="@Consts.ChatProviderOpenAI" Label="OpenAI"></SimpleSelectOption>
+                <SimpleSelectOption Value="@Consts.ChatProviderOpenAIResponses" Label="OpenAI Responses"></SimpleSelectOption>
                 <SimpleSelectOption Value="@Consts.ChatProviderAnthropic" Label="Anthropic"></SimpleSelectOption>
             </SelectOptions>
         </SimpleSelect>
     </FormItem>
     <FormItem Label="使用模型">
+        @if (config.Provider == Consts.ChatProviderOpenAIResponses)
+        {
+            <Input @bind-Value="config.Model" Placeholder="填写服务支持的模型名称" />
+        }
+        else
+        {
         <RadioGroup @bind-Value="config.Model">
-            @if(!string.IsNullOrEmpty(config.Provider)) 
+            @if(!string.IsNullOrEmpty(config.Provider) && ValidModels.TryGetValue(config.Provider, out var models))
             {
-                foreach(var model in ValidModels[config.Provider]) 
+                foreach(var model in models)
                 {
                     <Radio Value="@model">@model</Radio>
                 }
             }
         </RadioGroup>
+        }
     </FormItem>
     <FormItem Label="聊天对象Id">
         <Input @bind-Value="config.TargetId" />
@@ -70,6 +78,8 @@
 
     private void providerSelected(string value)
     {
+        if (config.Provider != value)
+            config.Model = null;
         config.Provider = value;
     }
 

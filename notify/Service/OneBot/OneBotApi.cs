@@ -1,9 +1,7 @@
 using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Web;
-using Notify.Domain.Config;
 using Notify.Domain.Models;
-using Notify.Domain.Utils;
 using SixLabors.ImageSharp;
 
 namespace Notify.Service.OneBot;
@@ -21,39 +19,6 @@ public class OneBotApi
         var reqToken = configuration["ONEBOT_REQ_SECRET"] ?? "";
         httpClient.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", reqToken);
         this.logger = logger;
-    }
-
-    /// <summary>
-    /// 发送消息
-    /// </summary>
-    /// <param name="groupId"></param>
-    /// <param name="userId"></param>
-    /// <param name="messageType">消息类型</param>
-    /// <param name="message"></param>
-    /// <returns></returns>
-    public async Task<bool> SendMessage(string id, string messageType, OneBotMessage message)
-    {
-        var groupId = messageType == Consts.MsgTargetTypeGroup ? id : "";
-        var userId = messageType == Consts.MsgTargetTypePrivate ? id : "";
-        var req = new
-        {
-            message_type = messageType,
-            group_id = groupId,
-            user_id = userId,
-            message = message.Items,
-        };
-        var resp = await this.httpClient.PostAsJsonAsync($"{this.oneBotUrl}/send_msg", req);
-        if (resp.IsSuccessStatusCode)
-        {
-            var def = new { retcode = 0 };
-            var respObj = NotifyExtension.DeserializeAnonymousType(await resp.Content.ReadAsStringAsync(), def);
-            return respObj.retcode == 0;
-        }
-        else
-        {
-            logger.LogWarning($"send msg failed, code:{resp.StatusCode}");
-        }
-        return false;
     }
 
     /// <summary>

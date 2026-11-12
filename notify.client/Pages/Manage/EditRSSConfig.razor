@@ -24,8 +24,8 @@
     <FormItem Label="订阅Id">
         <Input @bind-Value="config.SubscribeId" />
     </FormItem>
-    <FormItem Label="消息发送对象">
-        <Input @bind-Value="config.MsgTargetId" />
+    <FormItem Label="接收方 OpenID">
+        <Input @bind-Value="config.MsgTargetId" Placeholder="群聊填 group_openid，私聊填 user_openid" />
     </FormItem>
     <FormItem Label="消息类型">
         <RadioGroup @bind-Value="config.MsgTargetType">

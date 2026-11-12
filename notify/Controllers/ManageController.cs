@@ -2,13 +2,12 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Notify.Domain.Config;
 using Notify.Service.Manager;
-using Notify.Service.OneBot;
+using Notify.Service.OfficialBot;
 using Notify.Service.RSS;
 using Notify.Domain.Models;
 using Notify.Domain.Models.Request;
 using Notify.Domain.Models.Response;
 using Notify.Repository.Entity;
-using Notify.Domain.Utils;
 
 namespace notify.Controllers;
 
@@ -18,7 +17,7 @@ namespace notify.Controllers;
 public class ManageController : ControllerBase
 {
     private RSSNotifyYoutube rssNotifyYoutube;
-    private OneBotApi oneBotApi;
+    private OfficialBotApi officialBotApi;
     private RSSManager rssManager;
     private ChatBotManager chatBotManager;
     private EntityConfigManager entityConfigManager;
@@ -28,7 +27,7 @@ public class ManageController : ControllerBase
     {
 
         rssNotifyYoutube = sp.GetRequiredService<RSSNotifyYoutube>();
-        oneBotApi = sp.GetRequiredService<OneBotApi>();
+        officialBotApi = sp.GetRequiredService<OfficialBotApi>();
         rssManager = sp.GetRequiredService<RSSManager>();
         this.logger = logger;
         chatBotManager = sp.GetRequiredService<ChatBotManager>();
@@ -233,16 +232,12 @@ public class ManageController : ControllerBase
     #endregion
 
     [HttpGet("test-one-bot")]
-    public async Task<ActionResult<bool>> MsgTest() 
+    [HttpPost("test-official-bot")]
+    public async Task<ActionResult<bool>> MsgTest([FromQuery] string targetId, [FromQuery] string messageType = Consts.MsgTargetTypeGroup)
     {
-        var msg = new OneBotMessage();
-        msg.Items.Add(new OneBotMessageItem{
-            Type = OneBotMessageType.Text.ToCustomString(),
-            Data = new OneBotMessageItemData {
-                Text = "测试接口"
-            }
-        });
-        
-        return await oneBotApi.SendMessage("153624354", Consts.MsgTargetTypeGroup, msg);
+        if (string.IsNullOrWhiteSpace(targetId)
+            || (messageType != Consts.MsgTargetTypeGroup && messageType != Consts.MsgTargetTypePrivate))
+            return BadRequest("targetId must be an official OpenID and messageType must be private or group.");
+        return await officialBotApi.SendMessage(targetId, messageType, new OfficialBotMessage { Content = "测试接口" });
     }
 }

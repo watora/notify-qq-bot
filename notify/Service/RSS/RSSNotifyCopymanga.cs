@@ -55,7 +55,7 @@ public class RSSNotifyCopymanga : RSSNotifyBase
                     logger.LogInformation($"send copymanga update, name:{record.SubscribeId}, message:{JsonSerializer.Serialize(message)}");
                     if (sendMsg)
                     {
-                        var success = await oneBotApi.SendMessage(record.MsgTargetId, record.MsgTargetType, message);
+                        var success = await officialBotSender.SendMessage(record.MsgTargetId, record.MsgTargetType, message);
                         if (success)
                         {
                             record.LastMsgSendTime = now;

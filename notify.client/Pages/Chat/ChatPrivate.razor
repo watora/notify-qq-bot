@@ -6,6 +6,14 @@
 
 <PageTitle>聊天</PageTitle>
 
+<Flex Justify="center" Gap="small" Style="margin-bottom:8px">
+    <RadioGroup @bind-Value="useResponses">
+        <Radio Value="@(false)">原有聊天接口</Radio>
+        <Radio Value="@(true)">OpenAI Responses</Radio>
+    </RadioGroup>
+    <Input @bind-Value="model" Placeholder="模型名称" Style="width:260px" />
+</Flex>
+
 <Flex Justify="center" Style="height:calc(100vh - 4.6rem); width:100%; overflow: hidden;">
     <Flex Vertical Align="flex-start" Style="width:55%; height:100%; overflow: hidden;">
         <div style="width:100%; height:85%; overflow:auto">
@@ -37,6 +45,7 @@
     private string? messageInput;
     private string model = "claude-3-5-sonnet-20241022";
     private bool loading;
+    private bool useResponses;
 
     public class IncludeRequestCredentialsMessageHandler : DelegatingHandler
     {
@@ -70,13 +79,13 @@
 
     private async Task Send()
     {
-        if (hubConnection?.State == HubConnectionState.Connected && !string.IsNullOrEmpty(messageInput) && !loading)
+        if (hubConnection?.State == HubConnectionState.Connected && !string.IsNullOrWhiteSpace(model) && !string.IsNullOrEmpty(messageInput) && !loading)
         {
             loading = true;
             messages.Add(("flex-start", messageInput));
             messages.Add(("flex-end", "#loading"));
             await InvokeAsync(StateHasChanged);
-            await hubConnection.SendAsync("ChatToBot", model, messageInput);
+            await hubConnection.SendAsync(useResponses ? "ChatToResponsesBot" : "ChatToBot", model, messageInput);
             messageInput = "";
         }
     }
