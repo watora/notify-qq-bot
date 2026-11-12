@@ -1,3 +1,4 @@
+using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -16,12 +17,15 @@ public class OfficialBotController : ControllerBase
     private readonly OfficialBotOption options;
     private readonly OfficialBotSignature signature;
     private readonly OfficialBotEventQueue queue;
+    private readonly ILogger<OfficialBotController> logger;
 
-    public OfficialBotController(IOptions<OfficialBotOption> options, OfficialBotSignature signature, OfficialBotEventQueue queue)
+    public OfficialBotController(IOptions<OfficialBotOption> options, OfficialBotSignature signature, OfficialBotEventQueue queue,
+        ILogger<OfficialBotController> logger)
     {
         this.options = options.Value;
         this.signature = signature;
         this.queue = queue;
+        this.logger = logger;
     }
 
     [HttpPost("event")]
@@ -62,6 +66,9 @@ public class OfficialBotController : ControllerBase
                 return Unauthorized();
             if (payload.Op != 0)
                 return BadRequest();
+
+            logger.LogInformation("Receive official bot event: type {EventType}, id {EventId}, body {Body}",
+                payload.Type, payload.Id, Encoding.UTF8.GetString(body));
 
             if (OfficialBotEventMessage.IsMessageEvent(payload.Type))
             {

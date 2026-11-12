@@ -244,7 +244,7 @@ public partial class OfficialBotTests
     private static OfficialBotController Controller(string body, OfficialBotEventQueue queue, bool signed = true, bool enabled = true)
     {
         var signature = new OfficialBotSignature(Options(enabled));
-        var controller = new OfficialBotController(Options(enabled), signature, queue)
+        var controller = new OfficialBotController(Options(enabled), signature, queue, NullLogger<OfficialBotController>.Instance)
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() }
         };
